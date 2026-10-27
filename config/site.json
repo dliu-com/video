@@ -1,0 +1,5 @@
+{
+  "subdomain": "video",
+  "embedAncestors": ["https://dliu.com", "https://*.dliu.com"],
+  "maxUploadGiB": 50
+}

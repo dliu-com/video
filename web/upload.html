@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Upload · Videos · dliu.com</title>
+  <link rel="icon" href="/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/upload.js"></script>
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="/"><img class="logo" src="/logo.svg" alt="">Videos</a>
+    <nav></nav>
+  </header>
+  <main class="narrow">
+    <h1>Upload a video</h1>
+    <form id="form">
+      <label class="drop" id="drop" for="file">
+        <input type="file" id="file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v,video/ogg,.mp4,.m4v,.mov,.webm,.ogv">
+        <strong>Choose a video</strong> or drop it here<br>
+        <span class="muted">MP4 (H.264/AAC) plays everywhere. The file is served as uploaded, with no re-encoding.</span>
+      </label>
+
+      <div id="details" hidden>
+        <div class="preview">
+          <img id="poster" alt="Thumbnail preview">
+          <div>
+            <div id="file-info"></div>
+            <p class="muted" id="poster-note"></p>
+            <video id="probe" muted playsinline preload="metadata" hidden></video>
+          </div>
+        </div>
+        <label for="title">Title</label>
+        <input type="text" id="title" maxlength="200" required>
+        <label for="description">Description</label>
+        <textarea id="description" maxlength="5000"></textarea>
+        <label for="visibility">Visibility</label>
+        <select id="visibility">
+          <option value="public">Public: listed on the home page</option>
+          <option value="unlisted">Unlisted: only people with the link or an embed</option>
+        </select>
+        <p class="row">
+          <button class="primary" type="submit" id="submit">Upload</button>
+          <button type="button" id="cancel" hidden>Cancel upload</button>
+        </p>
+      </div>
+
+      <div id="progress-box" hidden>
+        <div class="progress"><div id="bar"></div></div>
+        <div class="muted" id="progress-text"></div>
+      </div>
+      <p id="status"></p>
+    </form>
+  </main>
+</body>
+</html>

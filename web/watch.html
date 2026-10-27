@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Video · dliu.com</title>
+  <link rel="icon" href="/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/watch.js"></script>
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="/"><img class="logo" src="/logo.svg" alt="">Videos</a>
+    <nav></nav>
+  </header>
+  <main>
+    <p class="muted" id="status">Loading…</p>
+    <section id="video" hidden>
+      <div class="player"><video id="player" controls playsinline preload="metadata"></video></div>
+      <h1 class="watch-title" id="title"></h1>
+      <div class="row spread">
+        <span class="muted" id="meta"></span>
+        <div class="row">
+          <button id="share" type="button">🔗 Copy link</button>
+          <button id="embed-toggle" type="button">&lt;/&gt; Embed</button>
+        </div>
+      </div>
+      <div class="description" id="description"></div>
+
+      <div class="panel" id="embed" hidden>
+        <h2>Embed this video</h2>
+        <p class="muted">Paste this HTML into a page on dliu.com or one of its subdomains (for example, a blog post).</p>
+        <div class="row">
+          <label class="inline"><input type="checkbox" id="embed-start"> Start at current time</label>
+          <label class="inline"><input type="checkbox" id="embed-autoplay"> Autoplay (muted)</label>
+          <label class="inline"><input type="checkbox" id="embed-loop"> Loop</label>
+        </div>
+        <label for="embed-code">HTML</label>
+        <textarea class="code" id="embed-code" readonly></textarea>
+        <div class="row"><button class="primary" id="embed-copy" type="button">Copy HTML</button><a id="embed-open" target="_blank" rel="noopener">Open player</a></div>
+      </div>
+
+      <div class="panel" id="owner" hidden>
+        <h2>Edit</h2>
+        <form id="edit-form">
+          <label for="edit-title">Title</label>
+          <input type="text" id="edit-title" maxlength="200" required>
+          <label for="edit-description">Description</label>
+          <textarea id="edit-description" maxlength="5000"></textarea>
+          <label for="edit-visibility">Visibility</label>
+          <select id="edit-visibility">
+            <option value="public">Public: listed on the home page</option>
+            <option value="unlisted">Unlisted: only people with the link or an embed</option>
+          </select>
+          <p class="row">
+            <button class="primary" type="submit">Save</button>
+            <button type="button" id="poster-frame">🖼 Use current frame as thumbnail</button>
+            <button type="button" class="danger" id="delete">Delete video</button>
+          </p>
+          <p class="muted" id="edit-status"></p>
+        </form>
+      </div>
+    </section>
+  </main>
+  <footer class="bottom"><a href="/">All videos</a> · <a data-sign-in href="/auth/login">Sign in</a></footer>
+</body>
+</html>
