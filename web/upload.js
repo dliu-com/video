@@ -178,7 +178,7 @@ async function submit(event) {
     setStatus('Finishing…');
     const { video } = await api('/api/uploads/complete', { id: plan.id, uploadId: plan.uploadId, parts });
     window.removeEventListener('beforeunload', warnLeave);
-    location.href = `/watch?v=${encodeURIComponent(video.id)}`;
+    location.href = `/${encodeURIComponent(video.id)}`;
   } catch (error) {
     const plan = current;
     if (plan && plan.uploadId) await api('/api/uploads/abort', { id: plan.id, uploadId: plan.uploadId }).catch(() => {});

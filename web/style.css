@@ -57,6 +57,8 @@ button:hover, .button:hover { border-color: #b8c0ca; background: var(--panel); t
 button.primary, .button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 button.primary:hover, .button.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
 .button.sign-in { padding: 9px 18px; font-weight: 600; box-shadow: 0 1px 3px rgba(37, 99, 235, 0.35); }
+.button.docs { padding: 9px 16px; font-weight: 600; }
+.button.docs[aria-current="page"] { border-color: var(--accent); color: var(--accent); }
 button.danger { color: var(--danger); }
 button:disabled { opacity: 0.55; cursor: default; }
 
@@ -146,7 +148,8 @@ label.inline { display: inline-flex; align-items: center; gap: 6px; margin: 0; c
 }
 @media (max-width: 400px) {
   .brand .name { display: none; }
-  header.top nav .button { padding: 8px 11px; }
+  header.top nav { gap: 6px; }
+  header.top nav .button { padding: 8px 10px; }
 }
 /* Landscape phones: let the video fill the height under the header */
 @media (max-height: 500px) and (orientation: landscape) {

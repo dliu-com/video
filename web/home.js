@@ -1,7 +1,7 @@
 import { ApiError, api, el, formatDate, formatDuration, getData, isOwner, renderNav } from './common.js';
 
 function card(video) {
-  return el('a', { class: 'card', href: `/watch?v=${encodeURIComponent(video.id)}` },
+  return el('a', { class: 'card', href: `/${encodeURIComponent(video.id)}` },
     el('div', { class: 'thumb' },
       video.poster ? el('img', { src: video.poster, alt: '', loading: 'lazy' }) : el('div', { class: 'play' }, '▶'),
       formatDuration(video.duration) ? el('span', { class: 'badge' }, formatDuration(video.duration)) : null),

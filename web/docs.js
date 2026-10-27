@@ -67,7 +67,7 @@ function architecture(root) {
         label: 'CloudFront', badge: 'Edge', tone: 'edge', link: 'HTTPS, video.dliu.com',
         nodes: [
           { icon: 'cloudfront', title: 'Distribution', text: 'TLS 1.2+, security headers, caches pages, posters and video bytes at the edge' },
-          { icon: 'page', title: 'Pages function', text: 'Clean URLs: /watch, /upload, /docs, /embed/<id>' },
+          { icon: 'page', title: 'Pages function', text: 'Clean URLs: /<id>, /embed/<id>, /upload, /docs' },
           { icon: 'cookie', title: 'Visitor ID function', text: 'Shared with the traffic monitor for visit counts' },
         ],
       },
@@ -95,7 +95,7 @@ function architecture(root) {
     title: 'What a viewer’s browser loads',
     numbered: true,
     steps: [
-      { icon: 'page', title: 'Page', text: '/watch?v=<id> from the site bucket' },
+      { icon: 'page', title: 'Page', text: '/<id> from the site bucket' },
       { icon: 'code', title: 'Details', text: '/data/videos/<id>.json: title, description, poster' },
       { icon: 'eye', title: 'Poster', text: '/t/<id>-<version>.jpg, cached for a year' },
       { icon: 'play', title: 'Video', text: '/v/<id>.mp4 in byte ranges, so seeking works at once', tone: 'good' },
@@ -122,9 +122,13 @@ function architecture(root) {
   root.append(code('<iframe src="https://video.dliu.com/embed/<id>" title="…"\n  style="width:100%;aspect-ratio:16/9;border:0"\n  allow="autoplay; fullscreen; picture-in-picture" allowfullscreen loading="lazy"></iframe>'));
   add('p', 'Only dliu.com and its subdomains may frame the player (Content-Security-Policy frame-ancestors). Options: ?autoplay=1 (muted, as browsers require), ?muted=1, ?loop=1 and ?t=<seconds> to start part way through.');
 
+  add('h2', 'Video IDs');
+  add('p', 'A video’s ID is the date it was uploaded (UK time) followed by a two-digit number for that day: 2026102700 is the first video uploaded on 27 October 2026, 2026102701 the second. Its page is video.dliu.com/2026102700.');
+  add('p', 'Each upload reserves its number with a conditional write to S3, so two uploads started at the same moment never get the same one. A number is never reused once a video was published under it, even after that video is deleted, because the video file is cached for a year and embeds must never start showing a different video. A cancelled upload frees its number. Up to 100 videos can be uploaded a day.');
+
   add('h2', 'URLs and where they come from');
   root.append(table(['Path', 'Served from', 'Caching'], [
-    [mono('/ /watch /upload /docs'), 'Site bucket, via the pages function', 'Revalidated on every load'],
+    [mono('/ /<id> /upload /docs'), 'Site bucket, via the pages function (/<id> serves watch.html)', 'Revalidated on every load'],
     [mono('/embed/<id>'), 'Site bucket (embed.html), framing allowed for dliu.com sites', 'Revalidated on every load'],
     [mono('/v/<id>.<ext>'), 'Video bucket: the video file', 'One year, immutable; byte ranges'],
     [mono('/t/<id>-<v>.jpg'), 'Video bucket: the poster; a new poster gets a new version', 'One year, immutable'],

@@ -13,13 +13,28 @@ const MAX_POSTER_BYTES = 5 * MiB;
 
 // Served as uploaded, so only containers browsers can play (codecs inside are the uploader's concern).
 const CONTENT_TYPES = { 'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov', 'video/x-m4v': 'm4v', 'video/ogg': 'ogv' };
-const ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
+// A video ID is its upload date in UK time plus a two-digit number for that day: 2026102700, 2026102701, ...
+const ID_PATTERN = /^\d{8}\d{2}$/;
+const PER_DAY = 100;
 const VERSION_PATTERN = /^[A-Za-z0-9_-]{8}$/;
 
 class BadRequest extends Error {}
 class NotFound extends Error {}
 
-const newId = () => crypto.randomBytes(8).toString('base64url');
+const LONDON_DATE = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' });
+
+/** yyyymmdd of a moment in UK time (GMT or BST). */
+function ukDate(ms) {
+  const parts = Object.fromEntries(LONDON_DATE.formatToParts(new Date(ms)).map((p) => [p.type, p.value]));
+  return `${parts.year}${parts.month}${parts.day}`;
+}
+
+/** The first number for a day that no published video, now or ever, has used. */
+function nextNumber(index, day) {
+  let last = index.last && Number.isInteger(index.last[day]) ? index.last[day] : -1;
+  for (const video of index.videos) if (video.id.startsWith(day)) last = Math.max(last, Number(video.id.slice(8)));
+  return last + 1;
+}
 const newVersion = () => crypto.randomBytes(6).toString('base64url');
 
 function text(value, name, max, { required = false } = {}) {
@@ -80,9 +95,8 @@ function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate
       if (!ext) throw new BadRequest(`Unsupported file type. Use one of: ${Object.keys(CONTENT_TYPES).join(', ')}`);
       const size = number(body.size, 'size', { integer: true, min: 1, max: maxBytes });
       if (size === null) throw new BadRequest('size is required');
-      const id = newId();
       const pending = {
-        id,
+        id: null,
         ext,
         title: text(body.title, 'title', 200, { required: true }),
         description: text(body.description, 'description', 5000),
@@ -95,16 +109,38 @@ function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate
         ...partPlan(size),
         createdAt: new Date(now()).toISOString(),
       };
+      // Reserve the number: creating pending/<id>.json only if it does not exist yet means two uploads
+      // started at the same moment cannot get the same ID. A cancelled upload frees its number again.
+      const day = ukDate(now());
+      const index = await store.readIndex(s3, bucket);
+      for (let n = nextNumber(index, day); n < PER_DAY && !pending.id; n += 1) {
+        const candidate = `${day}${String(n).padStart(2, '0')}`;
+        try {
+          await store.writeJson(s3, bucket, store.pendingKey(candidate), { ...pending, id: candidate }, { IfNoneMatch: '*' });
+          pending.id = candidate;
+        } catch (error) {
+          if (!store.isConflict(error)) throw error;
+        }
+      }
+      if (!pending.id) throw new BadRequest(`No video numbers left for today (${PER_DAY} a day)`);
+      const { id } = pending;
+
       const { CreateMultipartUploadCommand } = sdk();
-      const created = await s3.send(new CreateMultipartUploadCommand({
-        Bucket: bucket,
-        Key: store.videoKey(id, ext),
-        ContentType: pending.contentType,
-        // IDs are never reused and deletes invalidate the CDN, so the file can be cached for good.
-        CacheControl: 'public, max-age=31536000, immutable',
-        // Rarely watched videos move to cheaper tiers by themselves.
-        StorageClass: 'INTELLIGENT_TIERING',
-      }));
+      let created;
+      try {
+        created = await s3.send(new CreateMultipartUploadCommand({
+          Bucket: bucket,
+          Key: store.videoKey(id, ext),
+          ContentType: pending.contentType,
+          // Published numbers are never reused and deletes invalidate the CDN, so the file can be cached for good.
+          CacheControl: 'public, max-age=31536000, immutable',
+          // Rarely watched videos move to cheaper tiers by themselves.
+          StorageClass: 'INTELLIGENT_TIERING',
+        }));
+      } catch (error) {
+        await store.deleteKeys(s3, bucket, [store.pendingKey(id)]);
+        throw error;
+      }
       pending.uploadId = created.UploadId;
       await store.writeJson(s3, bucket, store.pendingKey(id), pending);
       return {
@@ -164,6 +200,9 @@ function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate
       };
       const { index } = await store.updateIndex(s3, bucket, (idx) => {
         idx.videos = idx.videos.filter((v) => v.id !== video.id).concat(video);
+        // Remember the highest number published each day, so a deleted video's number is never given out again.
+        const day = video.id.slice(0, 8);
+        idx.last = { ...idx.last, [day]: Math.max(nextNumber(idx, day) - 1, Number(video.id.slice(8))) };
         return true;
       });
       await store.publish(s3, bucket, index, { changed: [video.id] }, now());
@@ -237,4 +276,4 @@ function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate
   };
 }
 
-module.exports = { BadRequest, CONTENT_TYPES, NotFound, createVideos, partPlan };
+module.exports = { BadRequest, CONTENT_TYPES, NotFound, createVideos, partPlan, ukDate };

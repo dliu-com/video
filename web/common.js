@@ -97,11 +97,14 @@ export async function copyText(text, message = 'Copied') {
   }
 }
 
-/** Fills the header's nav: Upload and Sign out for the owner, nothing for viewers. */
+/** Fills the header's nav: Docs for everyone, then Upload and Sign out for the owner or Sign in for viewers. */
 export function renderNav() {
   const nav = document.querySelector('header.top nav');
   if (!nav) return;
   nav.replaceChildren();
+  const docs = el('a', { class: 'button docs', href: '/docs' }, 'Docs');
+  if (location.pathname.replace(/\/$/, '') === '/docs') docs.setAttribute('aria-current', 'page');
+  nav.append(docs);
   if (isOwner()) {
     nav.append(
       el('a', { class: 'button primary', href: '/upload' }, '＋ Upload'),

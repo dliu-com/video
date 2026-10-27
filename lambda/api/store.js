@@ -92,7 +92,7 @@ const publicVideo = (video) => ({
   poster: video.posterVersion ? `/${posterKey(video.id, video.posterVersion)}` : null,
 });
 
-const newestFirst = (a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0);
+const newestFirst = (a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id);
 
 /** Rewrites the public files after an index change: the catalog, plus data/videos/<id>.json for the given IDs. */
 async function publish(s3, bucket, index, { changed = [], removed = [] } = {}, now = Date.now()) {

@@ -44,7 +44,7 @@ When idle, the only cost is video storage. See [/docs#cost](https://video.dliu.c
 | --- | --- |
 | `lib/video-stack.ts` | The CDK stack |
 | `lambda/api/` | API and sign-in Lambda (`index.js` routes, `videos.js` upload/edit/delete, `store.js` S3 data, `auth.js` Entra, `presign.js` SigV4) |
-| `functions/pages.js` | CloudFront Function for clean URLs (`/watch`, `/upload`, `/docs`, `/embed/<id>`) |
+| `functions/pages.js` | CloudFront Function for clean URLs (`/<id>`, `/embed/<id>`, `/upload`, `/docs`) |
 | `web/` | Static pages: home, watch, upload, embed, and docs (`docs.js` content, `diagram.js` diagram kit from traffic-monitor) |
 | `config/site.json` | Subdomain, sites allowed to embed, upload size cap |
 | `scripts/set-secrets.sh` | Stores the Entra app credentials in SSM |
@@ -74,12 +74,21 @@ Then open https://video.dliu.com, choose **Sign in**, and upload.
 
 Until the first video is uploaded, `/data/catalog.json` doesn't exist (CloudFront returns 403) and the home page shows an empty list.
 
+## Video IDs
+
+A video's ID is its upload date in UK time plus a two-digit number for that day, and its page is `https://video.dliu.com/<id>`:
+
+- `video.dliu.com/2026102700` is the first video uploaded on 27 October 2026.
+- `video.dliu.com/2026102701` is the second.
+
+Each upload reserves its number with a conditional write (`pending/<id>.json`, `If-None-Match: *`), so simultaneous uploads get different numbers. Once a video has been published, its number is never reused, even after the video is deleted. `meta/index.json` records the highest number used each day. This matters because video files are cached for a year and embeds must never switch to a different video. A cancelled upload frees its number. The limit is 100 videos a day. `make smoke` uses up one number on each day it runs.
+
 ## Embedding
 
 On a video's page, choose **Embed**, pick the options, and copy the HTML. It looks like this:
 
 ```html
-<iframe src="https://video.dliu.com/embed/VIDEO_ID"
+<iframe src="https://video.dliu.com/embed/2026102700"
   title="Video title"
   style="width:100%;aspect-ratio:16/9;border:0"
   allow="autoplay; fullscreen; picture-in-picture" allowfullscreen loading="lazy"></iframe>

@@ -1,5 +1,6 @@
 const auth = require('../lambda/api/auth');
 const { createHandler } = require('../lambda/api/index');
+const { ukDate } = require('../lambda/api/videos');
 const { createFakeS3 } = require('./fake-s3');
 
 const SITE = 'https://video.dliu.com';
@@ -13,12 +14,12 @@ process.env.AWS_ACCESS_KEY_ID = 'AKIDEXAMPLE';
 process.env.AWS_SECRET_ACCESS_KEY = 'secret';
 process.env.MAX_UPLOAD_BYTES = String(10 * 1024 ** 3);
 
-const session = auth.sign({ user: 'me@example.com', name: 'Me', exp: Math.floor(NOW / 1000) + 3600 }, auth.sessionKey(config));
+const session = auth.sign({ user: 'me@example.com', name: 'Me', exp: Math.floor(NOW / 1000) + 7 * 86400 }, auth.sessionKey(config));
 
-function setup() {
+function setup({ now = () => NOW } = {}) {
   const s3 = createFakeS3();
   const invalidated = [];
-  const handler = createHandler({ loadConfig: async () => config, s3, now: () => NOW, invalidate: async (paths) => { invalidated.push(...paths); } });
+  const handler = createHandler({ loadConfig: async () => config, s3, now, invalidate: async (paths) => { invalidated.push(...paths); } });
   const call = (method, path, { body, signedIn = true, origin = SITE, query } = {}) => handler({
     rawPath: path,
     requestContext: { http: { method } },
@@ -68,7 +69,7 @@ describe('API', () => {
     const result = await call('POST', '/api/uploads', { body: { title: 'x', contentType: 'video/mp4', size: 40 * 1024 * 1024, poster: true } });
     expect(result.statusCode).toBe(200);
     const plan = result.json;
-    expect(plan.id).toMatch(/^[A-Za-z0-9_-]{11}$/);
+    expect(plan.id).toBe('2026102700');
     expect(plan.partSize).toBe(16 * 1024 * 1024);
     expect(plan.partCount).toBe(3);
     expect(new URL(plan.posterUrl).pathname).toMatch(new RegExp(`^/t/${plan.id}-[A-Za-z0-9_-]{8}\\.jpg$`));
@@ -161,7 +162,7 @@ describe('API', () => {
     expect(s3.json(`data/videos/${video.id}.json`).title).toBe('New');
     expect(s3.json('data/catalog.json').videos[0].title).toBe('New');
     expect((await call('POST', '/api/videos/update', { body: { id: video.id, title: ' ' } })).statusCode).toBe(400);
-    expect((await call('POST', '/api/videos/update', { body: { id: 'AAAAAAAAAAA', title: 'x' } })).statusCode).toBe(404);
+    expect((await call('POST', '/api/videos/update', { body: { id: '2020010100', title: 'x' } })).statusCode).toBe(404);
     expect((await call('POST', '/api/videos/update', { body: { id: '../../x', title: 'x' } })).statusCode).toBe(400);
   });
 
@@ -190,6 +191,61 @@ describe('API', () => {
     expect((await call('POST', '/api/videos/delete', { body: { id: video.id } })).statusCode).toBe(404);
   });
 
+  test('IDs are the UK upload date plus a number for that day', async () => {
+    expect(ukDate(Date.UTC(2026, 9, 27, 23, 30))).toBe('20261027'); // GMT
+    expect(ukDate(Date.UTC(2026, 6, 1, 23, 30))).toBe('20260702'); // BST: already the next day in the UK
+    expect(ukDate(Date.UTC(2026, 11, 31, 23, 59))).toBe('20261231');
+    let clock = NOW;
+    const { call, s3 } = setup({ now: () => clock });
+    const ids = [];
+    for (let i = 0; i < 3; i += 1) ids.push((await upload(call, s3)).video.id);
+    expect(ids).toEqual(['2026102700', '2026102701', '2026102702']);
+    clock = Date.UTC(2026, 9, 28, 9, 0);
+    expect((await upload(call, s3)).video.id).toBe('2026102800');
+    expect(s3.json('data/catalog.json').videos.map((v) => v.id)).toEqual(['2026102800', '2026102702', '2026102701', '2026102700']);
+  });
+
+  test("a deleted video's number is never given out again; a cancelled upload's number is", async () => {
+    const { call, s3 } = setup();
+    const first = (await upload(call, s3)).video;
+    const second = (await upload(call, s3)).video;
+    await call('POST', '/api/videos/delete', { body: { id: second.id } });
+    await call('POST', '/api/videos/delete', { body: { id: first.id } });
+    expect(s3.json('meta/index.json').last).toEqual({ 20261027: 1 });
+    const cancelled = (await call('POST', '/api/uploads', { body: { title: 'x', contentType: 'video/mp4', size: 10 } })).json;
+    expect(cancelled.id).toBe('2026102702');
+    await call('POST', '/api/uploads/abort', { body: { id: cancelled.id, uploadId: cancelled.uploadId } });
+    expect((await upload(call, s3)).video.id).toBe('2026102702');
+  });
+
+  test('uploads started together get different numbers', async () => {
+    const { call, s3 } = setup();
+    const start = () => call('POST', '/api/uploads', { body: { title: 'x', contentType: 'video/mp4', size: 10 } });
+    const plans = (await Promise.all([start(), start(), start()])).map((r) => r.json);
+    expect(plans.map((p) => p.id).sort()).toEqual(['2026102700', '2026102701', '2026102702']);
+    for (const plan of plans) expect(s3.json(`pending/${plan.id}.json`).uploadId).toBe(plan.uploadId);
+  });
+
+  test('at most 100 videos a day', async () => {
+    const { call, s3 } = setup();
+    s3.put('meta/index.json', JSON.stringify({ videos: [], last: { 20261027: 98 } }));
+    expect((await call('POST', '/api/uploads', { body: { title: 'x', contentType: 'video/mp4', size: 10 } })).json.id).toBe('2026102799');
+    const full = await call('POST', '/api/uploads', { body: { title: 'x', contentType: 'video/mp4', size: 10 } });
+    expect(full.statusCode).toBe(400);
+    expect(full.json.error).toMatch(/No video numbers left/);
+  });
+
+  test('a failed multipart start frees the number', async () => {
+    const { call, s3 } = setup();
+    const realSend = s3.send;
+    s3.send = async (command) => {
+      if (command.constructor.name === 'CreateMultipartUploadCommand') throw new Error('S3 down');
+      return realSend(command);
+    };
+    expect((await call('POST', '/api/uploads', { body: { title: 'x', contentType: 'video/mp4', size: 10 } })).statusCode).toBe(500);
+    expect([...s3.objects.keys()].filter((k) => k.startsWith('pending/'))).toEqual([]);
+  });
+
   test('the index write retries when another request changed it first', async () => {
     const { call, s3 } = setup();
     await upload(call, s3);
@@ -213,6 +269,6 @@ describe('API', () => {
     expect(result.statusCode).toBe(302);
     expect(new URL(result.headers.location).host).toBe('login.microsoftonline.com');
     for (const bad of ['//evil.com', 'https://evil.com', '/\\evil.com', '/a"b']) expect(auth.safeReturnPath(bad)).toBe('/');
-    expect(auth.safeReturnPath('/watch?v=AbC-_123xyz')).toBe('/watch?v=AbC-_123xyz');
+    expect(auth.safeReturnPath('/2026102700?t=5')).toBe('/2026102700?t=5');
   });
 });

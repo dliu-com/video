@@ -1,7 +1,15 @@
 import { api, captureFrame, copyText, formatDate, formatSize, getData, isOwner, putBlob, renderNav } from './common.js';
 
 const $ = (id) => document.getElementById(id);
-const id = new URLSearchParams(location.search).get('v') || '';
+// Videos live at /<id>; old-style /watch?v=<id> links are rewritten to that.
+const ID_PATTERN = /^[0-9]{10}$/;
+const pathId = location.pathname.replace(/^\/|\/$/g, '');
+const query = new URLSearchParams(location.search);
+const id = ID_PATTERN.test(pathId) ? pathId : query.get('v') || '';
+if (id !== pathId && ID_PATTERN.test(id)) {
+  query.delete('v');
+  history.replaceState(null, '', `/${id}${query.size ? `?${query}` : ''}`);
+}
 let video;
 
 function showVideo(data) {
@@ -99,7 +107,7 @@ function setupOwner() {
 }
 
 async function load() {
-  if (!/^[A-Za-z0-9_-]{11}$/.test(id)) throw new Error('Video not found.');
+  if (!ID_PATTERN.test(id)) throw new Error('Video not found.');
   const data = await getData(`/data/videos/${id}.json`);
   if (!data) throw new Error('Video not found. It may have been deleted.');
   showVideo(data);
@@ -111,7 +119,7 @@ async function load() {
   $('status').hidden = true;
   $('video').hidden = false;
 
-  $('share').addEventListener('click', () => copyText(`${location.origin}/watch?v=${video.id}`, 'Link copied'));
+  $('share').addEventListener('click', () => copyText(`${location.origin}/${video.id}`, 'Link copied'));
   $('embed-toggle').addEventListener('click', () => { $('embed').hidden = !$('embed').hidden; updateEmbed(); });
   for (const box of ['embed-start', 'embed-autoplay', 'embed-loop']) $(box).addEventListener('change', updateEmbed);
   player.addEventListener('pause', updateEmbed);

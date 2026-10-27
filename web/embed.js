@@ -7,13 +7,13 @@ const player = document.getElementById('player');
 const message = document.getElementById('message');
 
 async function load() {
-  if (!/^[A-Za-z0-9_-]{11}$/.test(id)) throw new Error();
+  if (!/^[0-9]{10}$/.test(id)) throw new Error();
   const video = await getData(`/data/videos/${id}.json`);
   if (!video) throw new Error();
   document.title = `${video.title} · dliu.com`;
   const link = document.getElementById('title');
   link.textContent = video.title;
-  link.href = `/watch?v=${encodeURIComponent(video.id)}`;
+  link.href = `/${encodeURIComponent(video.id)}`;
   link.parentElement.hidden = false;
 
   if (video.poster) player.poster = video.poster;

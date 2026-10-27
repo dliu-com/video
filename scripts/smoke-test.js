@@ -77,7 +77,7 @@ async function main() {
     check((await (await fetch(`${SITE}/data/videos/${video.id}.json`)).json()).title === 'Smoke test (edited)', 'edit published');
   } finally {
     if (keep) {
-      console.log(`kept ${SITE}/watch?v=${video.id}`);
+      console.log(`kept ${SITE}/${video.id}`);
     } else {
       await api('/api/videos/delete', { id: video.id });
       check((await fetch(`${SITE}/data/videos/${video.id}.json`)).status !== 200, 'deleted');
