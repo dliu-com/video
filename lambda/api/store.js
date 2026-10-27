@@ -3,10 +3,10 @@
 // Everything lives in the video bucket; there is no database.
 //   v/<id>.<ext>             the video file, served as uploaded
 //   t/<id>-<version>.jpg     poster image (a new version gets a new key, so caches never go stale)
-//   meta/index.json          every video, public and unlisted: the source of truth (not reachable from CloudFront)
+//   meta/index.json          every video: the source of truth (not reachable from CloudFront)
 //   pending/<id>.json        an upload in progress (not reachable from CloudFront)
-//   data/catalog.json        public videos, for the home page (served by CloudFront)
-//   data/videos/<id>.json    one video's details, public or unlisted, for the watch and embed pages
+//   data/catalog.json        every video, for the home page (served by CloudFront)
+//   data/videos/<id>.json    one video's details, for the watch and embed pages
 const INDEX_KEY = 'meta/index.json';
 const CATALOG_KEY = 'data/catalog.json';
 const videoDataKey = (id) => `data/videos/${id}.json`;
@@ -81,7 +81,6 @@ const publicVideo = (video) => ({
   id: video.id,
   title: video.title,
   description: video.description,
-  visibility: video.visibility,
   createdAt: video.createdAt,
   updatedAt: video.updatedAt,
   duration: video.duration,
@@ -100,8 +99,8 @@ async function publish(s3, bucket, index, { changed = [], removed = [] } = {}, n
   const noCache = { CacheControl: 'no-cache' };
   const catalog = {
     updatedAt: new Date(now).toISOString(),
-    videos: index.videos.filter((v) => v.visibility === 'public').sort(newestFirst).map((video) => {
-      const { description: _, contentType: __, size: ___, visibility: ____, ...summary } = publicVideo(video);
+    videos: [...index.videos].sort(newestFirst).map((video) => {
+      const { description: _, contentType: __, size: ___, ...summary } = publicVideo(video);
       return summary;
     }),
   };

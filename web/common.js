@@ -107,11 +107,8 @@ export function renderNav() {
       el('a', { class: 'button primary', href: '/upload' }, '＋ Upload'),
       el('a', { class: 'button', href: '/auth/logout' }, 'Sign out'),
     );
-  }
-  const signIn = document.querySelector('[data-sign-in]');
-  if (signIn) {
-    signIn.hidden = isOwner();
-    signIn.href = `/auth/login?return=${encodeURIComponent(location.pathname + location.search)}`;
+  } else {
+    nav.append(el('a', { class: 'button primary sign-in', href: signInUrl() }, 'Sign in'));
   }
 }
 

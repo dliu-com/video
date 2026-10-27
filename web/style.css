@@ -1,39 +1,46 @@
 :root {
-  color-scheme: dark;
-  --bg: #0f1115;
-  --panel: #171a21;
-  --panel-2: #1f232c;
-  --line: #2a2f3a;
-  --text: #e8eaed;
-  --muted: #9aa0aa;
-  --accent: #4f8cff;
-  --accent-2: #3a73e0;
-  --danger: #e5484d;
-  --ok: #30a46c;
+  color-scheme: light;
+  --bg: #ffffff;
+  --panel: #f6f7f9;
+  --panel-2: #ffffff;
+  --line: #dfe3e8;
+  --text: #1c2024;
+  --muted: #646b75;
+  --accent: #2563eb;
+  --accent-2: #1d4ed8;
+  --danger: #d1242f;
+  --ok: #1a7f37;
   --radius: 12px;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 * { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 html, body { margin: 0; background: var(--bg); color: var(--text); }
-body { min-height: 100vh; display: flex; flex-direction: column; }
+body { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+img, video { max-width: 100%; }
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 [hidden] { display: none !important; }
 
 header.top {
-  display: flex; align-items: center; gap: 16px; padding: 14px 24px;
-  border-bottom: 1px solid var(--line); background: rgba(15, 17, 21, 0.9);
+  display: flex; align-items: center; gap: 12px; padding: 12px max(24px, env(safe-area-inset-right)) 12px max(24px, env(safe-area-inset-left));
+  padding-top: max(12px, env(safe-area-inset-top));
+  border-bottom: 1px solid var(--line); background: rgba(255, 255, 255, 0.92);
   position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px);
 }
 .brand { font-weight: 700; font-size: 18px; color: var(--text); display: flex; align-items: center; gap: 8px; }
 .brand:hover { text-decoration: none; }
-.brand .logo { width: 26px; height: 26px; }
-header.top nav { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+.brand .logo { width: 26px; height: 26px; flex: none; }
+header.top nav { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+header.top nav .button { white-space: nowrap; }
 
-main { width: 100%; max-width: 1280px; margin: 0 auto; padding: 24px; flex: 1; }
+main {
+  width: 100%; max-width: 1280px; margin: 0 auto; flex: 1;
+  padding: 24px max(24px, env(safe-area-inset-right)) 24px max(24px, env(safe-area-inset-left));
+}
 main.narrow { max-width: 760px; }
-footer.bottom { color: var(--muted); font-size: 13px; text-align: center; padding: 24px; }
+footer.bottom { color: var(--muted); font-size: 13px; text-align: center; padding: 24px; padding-bottom: max(24px, env(safe-area-inset-bottom)); }
 footer.bottom a { color: var(--muted); }
 
 h1 { font-size: 24px; margin: 0 0 16px; }
@@ -46,46 +53,53 @@ button, .button {
   font: inherit; font-size: 14px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line);
   background: var(--panel-2); color: var(--text); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
 }
-button:hover, .button:hover { border-color: #3a4150; text-decoration: none; }
+button:hover, .button:hover { border-color: #b8c0ca; background: var(--panel); text-decoration: none; }
 button.primary, .button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-button.primary:hover, .button.primary:hover { background: var(--accent-2); }
+button.primary:hover, .button.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
+.button.sign-in { padding: 9px 18px; font-weight: 600; box-shadow: 0 1px 3px rgba(37, 99, 235, 0.35); }
 button.danger { color: var(--danger); }
 button:disabled { opacity: 0.55; cursor: default; }
 
 input[type=text], input[type=number], textarea, select {
   font: inherit; width: 100%; padding: 9px 11px; border-radius: 8px; border: 1px solid var(--line);
-  background: var(--panel); color: var(--text);
+  background: var(--panel-2); color: var(--text);
 }
+input:focus, textarea:focus, select:focus { outline: 2px solid rgba(37, 99, 235, 0.35); border-color: var(--accent); }
 textarea { min-height: 110px; resize: vertical; }
 textarea.code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; min-height: 90px; }
 label { display: block; font-size: 13px; color: var(--muted); margin: 14px 0 6px; }
 label.inline { display: inline-flex; align-items: center; gap: 6px; margin: 0; color: var(--text); }
 
 /* Home grid */
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 22px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 22px; }
 .card { color: var(--text); display: block; }
 .card:hover { text-decoration: none; }
-.card:hover .thumb img { transform: scale(1.03); }
+@media (hover: hover) {
+  .card:hover .thumb img { transform: scale(1.03); }
+}
 .thumb {
   position: relative; aspect-ratio: 16 / 9; border-radius: var(--radius); overflow: hidden;
-  background: linear-gradient(135deg, #222838, #151821);
+  background: linear-gradient(135deg, #e3e8ef, #cfd6df);
 }
 .thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s ease; display: block; }
-.thumb .play { position: absolute; inset: 0; display: grid; place-items: center; color: rgba(255, 255, 255, 0.5); font-size: 40px; }
+.thumb .play { position: absolute; inset: 0; display: grid; place-items: center; color: rgba(28, 32, 36, 0.35); font-size: 40px; }
 .badge {
   position: absolute; right: 8px; bottom: 8px; background: rgba(0, 0, 0, 0.78); color: #fff;
   font-size: 12px; padding: 2px 6px; border-radius: 4px; font-variant-numeric: tabular-nums;
 }
-.badge.left { left: 8px; right: auto; background: rgba(229, 72, 77, 0.9); }
 .card h3 { font-size: 15px; margin: 10px 0 4px; line-height: 1.35; overflow-wrap: anywhere; }
 .card .meta { font-size: 13px; color: var(--muted); }
 .empty { text-align: center; padding: 80px 20px; color: var(--muted); }
 
 /* Watch page */
+/* The box takes the video's own shape (--ratio, set by watch.js) and never grows taller than most of the screen,
+   so portrait phone videos are centred instead of shrinking inside a wide box. */
 .player {
-  width: 100%; aspect-ratio: 16 / 9; max-height: 78vh; background: #000; border-radius: var(--radius);
-  overflow: hidden; display: flex;
+  --ratio: 1.7778; --max-h: 78vh;
+  width: min(100%, calc(var(--max-h) * var(--ratio))); aspect-ratio: var(--ratio); margin: 0 auto;
+  background: #000; border-radius: var(--radius); overflow: hidden; display: flex;
 }
+@supports (height: 1dvh) { .player { --max-h: 78dvh; } }
 .player video { width: 100%; height: 100%; background: #000; }
 .watch-title { font-size: 22px; margin: 16px 0 6px; overflow-wrap: anywhere; }
 .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
@@ -94,8 +108,10 @@ label.inline { display: inline-flex; align-items: center; gap: 6px; margin: 0; c
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; margin-top: 18px; }
 .panel h2 { margin-top: 0; }
 .toast {
-  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--panel-2);
+  position: fixed; left: 50%; bottom: max(24px, env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--panel-2);
+  width: max-content; max-width: calc(100vw - 32px); text-align: center;
   border: 1px solid var(--line); padding: 10px 16px; border-radius: 8px; z-index: 50;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
 /* Upload page */
@@ -107,15 +123,50 @@ label.inline { display: inline-flex; align-items: center; gap: 6px; margin: 0; c
 .drop input { display: none; }
 .preview { display: grid; grid-template-columns: 240px 1fr; gap: 16px; align-items: start; margin-top: 18px; }
 .preview img { width: 100%; border-radius: 8px; background: #000; aspect-ratio: 16 / 9; object-fit: contain; }
-.progress { height: 10px; background: var(--panel-2); border-radius: 6px; overflow: hidden; margin: 12px 0 6px; }
+.progress { height: 10px; background: var(--line); border-radius: 6px; overflow: hidden; margin: 12px 0 6px; }
 .progress > div { height: 100%; width: 0; background: var(--accent); transition: width 0.2s; }
+
+/* Phones and small tablets */
 @media (max-width: 640px) {
-  main { padding: 16px; }
+  header.top { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+  main { padding: 16px max(16px, env(safe-area-inset-right)) 16px max(16px, env(safe-area-inset-left)); }
+  h1 { font-size: 21px; }
+  .grid { gap: 18px; }
   .preview { grid-template-columns: 1fr; }
+  .drop { padding: 28px 16px; }
+  /* Edge-to-edge player, like native video apps */
+  .player {
+    --w: min(100vw, calc(var(--max-h) * var(--ratio)));
+    width: var(--w); max-width: none; border-radius: 0;
+    margin-left: max(-16px, calc((100% - var(--w)) / 2)); margin-right: 0;
+  }
+  .watch-title { font-size: 19px; }
+  .row.spread { align-items: flex-start; }
+  .panel { padding: 14px; }
+}
+@media (max-width: 400px) {
+  .brand .name { display: none; }
+  header.top nav .button { padding: 8px 11px; }
+}
+/* Landscape phones: let the video fill the height under the header */
+@media (max-height: 500px) and (orientation: landscape) {
+  .player { --max-h: calc(100vh - 70px); }
+  @supports (height: 1dvh) { .player { --max-h: calc(100dvh - 70px); } }
+}
+/* Touch screens: bigger targets, and 16px text so iOS doesn't zoom into fields */
+@media (pointer: coarse) {
+  button, .button { min-height: 44px; }
+  input[type=text], input[type=number], textarea, select { font-size: 16px; }
+  label.inline { min-height: 32px; }
+  input[type=checkbox] { width: 20px; height: 20px; }
+}
+/* Big screens */
+@media (min-width: 1600px) {
+  main { max-width: 1520px; }
 }
 
 /* Embed player */
-body.embed { background: #000; min-height: 0; height: 100vh; overflow: hidden; }
+body.embed { background: #000; min-height: 0; height: 100vh; height: 100dvh; overflow: hidden; }
 body.embed video { position: fixed; inset: 0; width: 100%; height: 100%; background: #000; }
 body.embed .overlay {
   position: fixed; left: 0; right: 0; top: 0; padding: 10px 14px; z-index: 2; pointer-events: none;
@@ -123,4 +174,4 @@ body.embed .overlay {
 }
 body.embed .overlay a { color: #fff; font-size: 15px; font-weight: 600; pointer-events: auto; text-shadow: 0 1px 2px #000; }
 body.embed.playing .overlay { opacity: 0; }
-body.embed .message { color: #ccc; display: grid; place-items: center; height: 100vh; font-size: 15px; }
+body.embed .message { color: #ccc; display: grid; place-items: center; height: 100vh; height: 100dvh; font-size: 15px; padding: 0 16px; text-align: center; }

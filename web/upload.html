@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Upload · Videos · dliu.com</title>
   <link rel="icon" href="/logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/style.css">
@@ -10,7 +10,7 @@
 </head>
 <body>
   <header class="top">
-    <a class="brand" href="/"><img class="logo" src="/logo.svg" alt="">Videos</a>
+    <a class="brand" href="/" aria-label="Videos home"><img class="logo" src="/logo.svg" alt=""><span class="name">Videos</span></a>
     <nav></nav>
   </header>
   <main class="narrow">
@@ -35,11 +35,6 @@
         <input type="text" id="title" maxlength="200" required>
         <label for="description">Description</label>
         <textarea id="description" maxlength="5000"></textarea>
-        <label for="visibility">Visibility</label>
-        <select id="visibility">
-          <option value="public">Public: listed on the home page</option>
-          <option value="unlisted">Unlisted: only people with the link or an embed</option>
-        </select>
         <p class="row">
           <button class="primary" type="submit" id="submit">Upload</button>
           <button type="button" id="cancel" hidden>Cancel upload</button>

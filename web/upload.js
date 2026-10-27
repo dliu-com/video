@@ -164,7 +164,6 @@ async function submit(event) {
     const plan = await api('/api/uploads', {
       title: $('title').value,
       description: $('description').value,
-      visibility: $('visibility').value,
       contentType: contentTypeOf(file),
       size: file.size,
       duration: meta.duration,

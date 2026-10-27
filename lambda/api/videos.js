@@ -13,7 +13,6 @@ const MAX_POSTER_BYTES = 5 * MiB;
 
 // Served as uploaded, so only containers browsers can play (codecs inside are the uploader's concern).
 const CONTENT_TYPES = { 'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov', 'video/x-m4v': 'm4v', 'video/ogg': 'ogv' };
-const VISIBILITY = ['public', 'unlisted'];
 const ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
 const VERSION_PATTERN = /^[A-Za-z0-9_-]{8}$/;
 
@@ -41,12 +40,6 @@ function number(value, name, { integer = false, min = 0, max = Number.MAX_SAFE_I
   if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max || (integer && !Number.isInteger(value))) {
     throw new BadRequest(`${name} is not valid`);
   }
-  return value;
-}
-
-function visibility(value, fallback) {
-  if (value === undefined) return fallback;
-  if (!VISIBILITY.includes(value)) throw new BadRequest('visibility must be public or unlisted');
   return value;
 }
 
@@ -93,7 +86,6 @@ function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate
         ext,
         title: text(body.title, 'title', 200, { required: true }),
         description: text(body.description, 'description', 5000),
-        visibility: visibility(body.visibility, 'public'),
         contentType: body.contentType,
         size,
         duration: number(body.duration, 'duration', { max: 7 * 24 * 3600 }),
@@ -161,7 +153,6 @@ function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate
         ext: pending.ext,
         title: pending.title,
         description: pending.description,
-        visibility: pending.visibility,
         contentType: pending.contentType,
         size: head.ContentLength,
         duration: pending.duration,
@@ -207,7 +198,6 @@ function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate
       const changes = {};
       if (body.title !== undefined) changes.title = text(body.title, 'title', 200, { required: true });
       if (body.description !== undefined) changes.description = text(body.description, 'description', 5000);
-      if (body.visibility !== undefined) changes.visibility = visibility(body.visibility);
       if (body.posterVersion !== undefined) {
         if (typeof body.posterVersion !== 'string' || !VERSION_PATTERN.test(body.posterVersion)) throw new BadRequest('Invalid poster');
         if (!(await posterInfo(id, body.posterVersion))) throw new BadRequest('Poster upload not found or too large');

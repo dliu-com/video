@@ -26,6 +26,6 @@ outputs:
 	aws cloudformation describe-stacks --region $(AWS_REGION) --stack-name $(STACK_NAME) \
 		--query 'Stacks[0].Outputs[].[OutputKey,OutputValue]' --output table
 
-# End-to-end test against the deployed site. Uploads, checks and deletes a throwaway unlisted video.
+# End-to-end test against the deployed site. Uploads, checks and deletes a throwaway video.
 smoke:
 	AWS_REGION=$(AWS_REGION) node scripts/smoke-test.js

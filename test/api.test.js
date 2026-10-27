@@ -99,7 +99,6 @@ describe('API', () => {
     [{ title: '', contentType: 'video/mp4', size: 10 }, 'title is required'],
     [{ title: 'a', contentType: 'video/x-matroska', size: 10 }, 'Unsupported file type'],
     [{ title: 'a', contentType: 'video/mp4', size: 11 * 1024 ** 3 }, 'size is not valid'],
-    [{ title: 'a', contentType: 'video/mp4', size: 10, visibility: 'private' }, 'visibility'],
     [{ title: 'a'.repeat(201), contentType: 'video/mp4', size: 10 }, 'longer than 200'],
   ])('rejects bad upload %#', async (body, message) => {
     const { call } = setup();
@@ -112,7 +111,7 @@ describe('API', () => {
     const { call, s3 } = setup();
     const { plan, video } = await upload(call, s3);
     expect(video).toMatchObject({
-      id: plan.id, title: 'My trip', description: 'Line 1\nLine 2', visibility: 'public', duration: 61.5, width: 1920, height: 1080,
+      id: plan.id, title: 'My trip', description: 'Line 1\nLine 2', duration: 61.5, width: 1920, height: 1080,
       src: `/v/${plan.id}.mp4`, size: 1234,
     });
     expect(video.poster).toMatch(new RegExp(`^/t/${plan.id}-`));
@@ -143,13 +142,6 @@ describe('API', () => {
     expect((await send([1, 2, 3].map((n) => ({ partNumber: n, etag: '<bad>' })))).statusCode).toBe(400);
   });
 
-  test('unlisted videos get a details file but stay out of the catalog', async () => {
-    const { call, s3 } = setup();
-    const { video } = await upload(call, s3, { visibility: 'unlisted' });
-    expect(s3.json(`data/videos/${video.id}.json`).visibility).toBe('unlisted');
-    expect(s3.json('data/catalog.json').videos).toEqual([]);
-  });
-
   test('abort removes the upload, its record and its poster', async () => {
     const { call, s3 } = setup();
     const plan = (await call('POST', '/api/uploads', { body: { title: 'x', contentType: 'video/mp4', size: 10, poster: true } })).json;
@@ -161,13 +153,13 @@ describe('API', () => {
     expect(s3.objects.has(posterKey)).toBe(false);
   });
 
-  test('update edits details and visibility', async () => {
+  test('update edits details', async () => {
     const { call, s3 } = setup();
     const { video } = await upload(call, s3);
-    const result = await call('POST', '/api/videos/update', { body: { id: video.id, title: 'New', visibility: 'unlisted' } });
-    expect(result.json.video).toMatchObject({ title: 'New', description: 'Line 1\nLine 2', visibility: 'unlisted' });
+    const result = await call('POST', '/api/videos/update', { body: { id: video.id, title: 'New' } });
+    expect(result.json.video).toMatchObject({ title: 'New', description: 'Line 1\nLine 2' });
     expect(s3.json(`data/videos/${video.id}.json`).title).toBe('New');
-    expect(s3.json('data/catalog.json').videos).toEqual([]);
+    expect(s3.json('data/catalog.json').videos[0].title).toBe('New');
     expect((await call('POST', '/api/videos/update', { body: { id: video.id, title: ' ' } })).statusCode).toBe(400);
     expect((await call('POST', '/api/videos/update', { body: { id: 'AAAAAAAAAAA', title: 'x' } })).statusCode).toBe(404);
     expect((await call('POST', '/api/videos/update', { body: { id: '../../x', title: 'x' } })).statusCode).toBe(400);

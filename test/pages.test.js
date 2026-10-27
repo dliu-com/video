@@ -10,6 +10,8 @@ describe('pages CloudFront function', () => {
     ['/watch', '/watch.html'],
     ['/watch/', '/watch.html'],
     ['/upload', '/upload.html'],
+    ['/docs', '/docs.html'],
+    ['/docs/', '/docs.html'],
     ['/embed/AbC-_123xyz', '/embed.html'],
     ['/embed/AbC-_123xyz/', '/embed.html'],
     ['/', '/'],

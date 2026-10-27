@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // End-to-end test against the deployed site: upload (multipart, straight to S3), publish, serve,
-// edit, embed and delete a throwaway unlisted video. It signs a short-lived owner session with
+// edit, embed and delete a throwaway video. It signs a short-lived owner session with
 // the session key derived from the Entra client secret in SSM, so it needs AWS credentials.
 // Usage: node scripts/smoke-test.js [--keep]
 const crypto = require('crypto');
@@ -42,7 +42,7 @@ async function main() {
   const file = crypto.randomBytes(20 * 1024 * 1024);
   const plan = await api('/api/uploads', {
     title: 'Smoke test', description: 'Automated end-to-end test', contentType: 'video/mp4',
-    size: file.length, duration: 12, width: 1280, height: 720, poster: true, visibility: 'unlisted',
+    size: file.length, duration: 12, width: 1280, height: 720, poster: true,
   });
   check(plan.partCount === 2, `upload planned as ${plan.partCount} parts`);
   try {
@@ -70,7 +70,7 @@ async function main() {
     check(range.status === 206 && bytes.equals(file.subarray(100, 200)), 'video served with byte ranges');
     check((await fetch(SITE + video.poster)).headers.get('content-type') === 'image/jpeg', 'poster served');
     check((await (await fetch(`${SITE}/data/videos/${video.id}.json`)).json()).title === 'Smoke test', 'details published');
-    check(!(await (await fetch(`${SITE}/data/catalog.json`)).json()).videos.some((v) => v.id === video.id), 'unlisted video kept out of the catalog');
+    check((await (await fetch(`${SITE}/data/catalog.json`)).json()).videos.some((v) => v.id === video.id), 'video listed in the catalog');
     const embed = await fetch(`${SITE}/embed/${video.id}`);
     check(embed.ok && /frame-ancestors 'self' /.test(embed.headers.get('content-security-policy')), 'embed page can be framed');
     await api('/api/videos/update', { id: video.id, title: 'Smoke test (edited)' });

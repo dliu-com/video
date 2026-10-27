@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Video · dliu.com</title>
   <link rel="icon" href="/logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/style.css">
@@ -10,7 +10,7 @@
 </head>
 <body>
   <header class="top">
-    <a class="brand" href="/"><img class="logo" src="/logo.svg" alt="">Videos</a>
+    <a class="brand" href="/" aria-label="Videos home"><img class="logo" src="/logo.svg" alt=""><span class="name">Videos</span></a>
     <nav></nav>
   </header>
   <main>
@@ -47,11 +47,6 @@
           <input type="text" id="edit-title" maxlength="200" required>
           <label for="edit-description">Description</label>
           <textarea id="edit-description" maxlength="5000"></textarea>
-          <label for="edit-visibility">Visibility</label>
-          <select id="edit-visibility">
-            <option value="public">Public: listed on the home page</option>
-            <option value="unlisted">Unlisted: only people with the link or an embed</option>
-          </select>
           <p class="row">
             <button class="primary" type="submit">Save</button>
             <button type="button" id="poster-frame">🖼 Use current frame as thumbnail</button>
@@ -62,6 +57,6 @@
       </div>
     </section>
   </main>
-  <footer class="bottom"><a href="/">All videos</a> · <a data-sign-in href="/auth/login">Sign in</a></footer>
+  <footer class="bottom"><a href="/">All videos</a> · <a href="/docs">How it works</a></footer>
 </body>
 </html>

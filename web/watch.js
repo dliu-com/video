@@ -8,10 +8,10 @@ function showVideo(data) {
   video = data;
   document.title = `${data.title} · dliu.com`;
   $('title').textContent = data.title;
-  $('meta').textContent = [formatDate(data.createdAt), data.visibility === 'unlisted' ? 'Unlisted' : '', isOwner() ? formatSize(data.size) : '']
+  $('meta').textContent = [formatDate(data.createdAt), isOwner() ? formatSize(data.size) : '']
     .filter(Boolean).join(' · ');
   $('description').textContent = data.description || '';
-  if (data.width && data.height) $('player').parentElement.style.aspectRatio = `${data.width} / ${data.height}`;
+  if (data.width && data.height) $('player').parentElement.style.setProperty('--ratio', String(data.width / data.height));
   updateEmbed();
 }
 
@@ -38,7 +38,6 @@ function setupOwner() {
   $('owner').hidden = false;
   $('edit-title').value = video.title;
   $('edit-description').value = video.description || '';
-  $('edit-visibility').value = video.visibility;
   const status = $('edit-status');
   const busy = (on) => $('owner').querySelectorAll('button').forEach((b) => { b.disabled = on; });
 
@@ -49,7 +48,7 @@ function setupOwner() {
     status.textContent = 'Saving…';
     try {
       const result = await api('/api/videos/update', {
-        id: video.id, title: $('edit-title').value, description: $('edit-description').value, visibility: $('edit-visibility').value,
+        id: video.id, title: $('edit-title').value, description: $('edit-description').value,
       });
       showVideo(result.video);
       status.className = 'success';

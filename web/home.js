@@ -4,7 +4,6 @@ function card(video) {
   return el('a', { class: 'card', href: `/watch?v=${encodeURIComponent(video.id)}` },
     el('div', { class: 'thumb' },
       video.poster ? el('img', { src: video.poster, alt: '', loading: 'lazy' }) : el('div', { class: 'play' }, '▶'),
-      video.visibility === 'unlisted' ? el('span', { class: 'badge left' }, 'Unlisted') : null,
       formatDuration(video.duration) ? el('span', { class: 'badge' }, formatDuration(video.duration)) : null),
     el('h3', {}, video.title),
     el('div', { class: 'meta' }, formatDate(video.createdAt)));
@@ -14,7 +13,7 @@ async function load() {
   const status = document.getElementById('status');
   let videos;
   if (isOwner()) {
-    // The owner sees every video, including unlisted ones.
+    // The API reads the index directly, so the owner sees new uploads without waiting for the catalog cache.
     try {
       videos = (await api('/api/videos')).videos;
       document.getElementById('heading').textContent = 'All videos';

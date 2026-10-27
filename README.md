@@ -2,6 +2,8 @@
 
 A small, serverless video site. The owner uploads videos after signing in with Microsoft 365. Anyone can watch them. Any video can be embedded in other sites, such as blog.dliu.com.
 
+The live docs at [video.dliu.com/docs](https://video.dliu.com/docs) cover the technical architecture, running costs and security (including a live penetration test).
+
 ## How it works
 
 ```mermaid
@@ -17,8 +19,8 @@ flowchart LR
 
 - **Videos are served as uploaded.** There is no transcoding. MP4 (H.264/AAC) plays everywhere; WebM, MOV, M4V and OGV are also accepted. CloudFront serves byte ranges, so seeking works.
 - **Uploads go straight from the browser to S3** using presigned multipart URLs. Parts are at least 16 MiB, four upload in parallel, and failed parts are retried. The browser also reads the duration and size and grabs a thumbnail frame.
-- **There is no database.** `meta/index.json` in the video bucket is the source of truth and is updated with conditional writes. The Lambda publishes `data/catalog.json` (public videos) and `data/videos/<id>.json` (one per video). Pages read these through CloudFront.
-- **Visibility.** A video is either *public*, listed on the home page, or *unlisted*, reachable only by its link or embed.
+- **There is no database.** `meta/index.json` in the video bucket is the source of truth and is updated with conditional writes. The Lambda publishes `data/catalog.json` (the list of videos) and `data/videos/<id>.json` (one per video). Pages read these through CloudFront.
+- Every video is listed on the home page and can be watched or embedded by anyone with its link.
 - **Sign-in** uses Entra OIDC with PKCE, the same as traffic-monitor. Only accounts in the root domain (`@dliu.com`) can manage videos.
 - Page views are logged by the shared traffic-monitor visitor function and geo origin request policy.
 
@@ -34,7 +36,7 @@ Nothing runs while nobody is using the site, and there is no fixed monthly fee. 
 | SSM Parameter Store | Standard parameters, which are free |
 | Route 53, ACM | Covered by the existing hosted zone; public certificates are free |
 
-When idle, the only cost is video storage.
+When idle, the only cost is video storage. See [/docs#cost](https://video.dliu.com/docs#cost) for prices and examples.
 
 ## Layout
 
@@ -42,8 +44,8 @@ When idle, the only cost is video storage.
 | --- | --- |
 | `lib/video-stack.ts` | The CDK stack |
 | `lambda/api/` | API and sign-in Lambda (`index.js` routes, `videos.js` upload/edit/delete, `store.js` S3 data, `auth.js` Entra, `presign.js` SigV4) |
-| `functions/pages.js` | CloudFront Function for clean URLs (`/watch`, `/upload`, `/embed/<id>`) |
-| `web/` | Static pages: home, watch, upload, embed |
+| `functions/pages.js` | CloudFront Function for clean URLs (`/watch`, `/upload`, `/docs`, `/embed/<id>`) |
+| `web/` | Static pages: home, watch, upload, embed, and docs (`docs.js` content, `diagram.js` diagram kit from traffic-monitor) |
 | `config/site.json` | Subdomain, sites allowed to embed, upload size cap |
 | `scripts/set-secrets.sh` | Stores the Entra app credentials in SSM |
 
@@ -105,7 +107,7 @@ make diff
 make smoke    # end-to-end against the deployed site
 ```
 
-`make smoke` (`scripts/smoke-test.js`) uploads a throwaway 20 MiB *unlisted* video in two parts straight to S3. It then checks CORS, publishing, byte-range serving, the poster, the catalog, the embed headers and editing, and deletes the video. It signs a 10-minute owner session with the key derived from the client secret in SSM, so it needs AWS credentials that can read `/video/*`. Use `node scripts/smoke-test.js --keep` to leave the video in place for a look in the browser.
+`make smoke` (`scripts/smoke-test.js`) uploads a throwaway 20 MiB video in two parts straight to S3. It then checks CORS, publishing, byte-range serving, the poster, the catalog, the embed headers and editing, and deletes the video. It signs a 10-minute owner session with the key derived from the client secret in SSM, so it needs AWS credentials that can read `/video/*`. Use `node scripts/smoke-test.js --keep` to leave the video in place for a look in the browser.
 
 ## Traffic monitoring
 
@@ -116,3 +118,5 @@ The site is registered in traffic-monitor as `video` (`config/sites.json` there,
 - Deleting a video removes its file, thumbnail and details and invalidates them in CloudFront. Existing embeds stop working.
 - Unfinished multipart uploads are aborted by S3 after 2 days. Pending upload records expire after 7 days.
 - The video bucket is retained if the stack is deleted. The site bucket is not.
+- The site uses a light theme only and adapts from small phones to wide screens, including notches (safe areas) and landscape phones.
+- When the code, prices or security checks change, update `web/docs.js`.

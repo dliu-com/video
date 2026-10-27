@@ -1,6 +1,6 @@
 // CloudFront Function (cloudfront-js-2.0), viewer-request on the page behaviors.
-// Clean URLs: /watch?v=<id> -> /watch.html, /upload -> /upload.html, /embed/<id> -> /embed.html.
-var PAGES = { '/watch': '/watch.html', '/upload': '/upload.html' };
+// Clean URLs: /watch?v=<id> -> /watch.html, /upload -> /upload.html, /docs -> /docs.html, /embed/<id> -> /embed.html.
+var PAGES = { '/watch': '/watch.html', '/upload': '/upload.html', '/docs': '/docs.html' };
 
 function handler(event) {
   var request = event.request;
