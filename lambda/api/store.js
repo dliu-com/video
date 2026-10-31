@@ -2,6 +2,7 @@
 
 // Everything lives in the video bucket; there is no database.
 //   v/<id>.<ext>             the video file, served as uploaded
+//   v/<id>-<version>.<ext>   a replacement file (a new key, so the year-long CDN cache never serves the old one)
 //   t/<id>-<version>.jpg     poster image (a new version gets a new key, so caches never go stale)
 //   meta/index.json          every video: the source of truth (not reachable from CloudFront)
 //   pending/<id>.json        an upload in progress (not reachable from CloudFront)
@@ -11,7 +12,7 @@ const INDEX_KEY = 'meta/index.json';
 const CATALOG_KEY = 'data/catalog.json';
 const videoDataKey = (id) => `data/videos/${id}.json`;
 const pendingKey = (id) => `pending/${id}.json`;
-const videoKey = (id, ext) => `v/${id}.${ext}`;
+const videoKey = (id, ext, version) => (version ? `v/${id}-${version}.${ext}` : `v/${id}.${ext}`);
 const posterKey = (id, version) => `t/${id}-${version}.jpg`;
 
 const s3sdk = () => require('@aws-sdk/client-s3');
@@ -88,7 +89,7 @@ const publicVideo = (video) => ({
   height: video.height,
   size: video.size,
   contentType: video.contentType,
-  src: `/${videoKey(video.id, video.ext)}`,
+  src: `/${videoKey(video.id, video.ext, video.fileVersion)}`,
   poster: video.posterVersion ? `/${posterKey(video.id, video.posterVersion)}` : null,
 });
 

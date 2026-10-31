@@ -1,4 +1,4 @@
-import { api, captureFrame, formatDuration, formatSize, isOwner, putBlob, renderNav, signInUrl } from './common.js';
+import { api, captureFrame, formatDuration, formatSize, getData, isOwner, putBlob, renderNav, signInUrl } from './common.js';
 
 const $ = (id) => document.getElementById(id);
 const CONCURRENCY = 4;
@@ -10,6 +10,9 @@ let file;
 let meta = {};
 let posterBlob = null;
 let current = null; // the upload in progress: { id, uploadId, cancelled }
+// /upload?replace=<id> uploads a new version of an existing video.
+const replaceId = /^[0-9]{10}$/.test(new URLSearchParams(location.search).get('replace') || '')
+  ? new URLSearchParams(location.search).get('replace') : null;
 
 function contentTypeOf(f) {
   if (Object.values(TYPES).includes(f.type)) return f.type;
@@ -28,6 +31,7 @@ async function probe(f) {
   meta = {};
   posterBlob = null;
   $('poster').removeAttribute('src');
+  $('new-poster-box').hidden = true;
   try {
     video.src = url;
     await new Promise((resolve, reject) => {
@@ -44,6 +48,7 @@ async function probe(f) {
       posterBlob = await captureFrame(video);
       $('poster').src = URL.createObjectURL(posterBlob);
       $('poster-note').textContent = 'Thumbnail from 1 second in. You can pick another frame on the video page later.';
+      $('new-poster-box').hidden = !replaceId;
     } else {
       $('poster-note').textContent = 'Audio only: no thumbnail.';
     }
@@ -65,7 +70,7 @@ async function choose(f) {
   file = f;
   setStatus('');
   $('details').hidden = false;
-  if (!$('title').value) $('title').value = f.name.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ');
+  if (!replaceId && !$('title').value) $('title').value = f.name.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ');
   $('file-info').textContent = `${f.name} · ${formatSize(f.size)}`;
   $('poster-note').textContent = 'Reading the video…';
   await probe(f);
@@ -148,6 +153,20 @@ async function uploadParts(plan) {
   return etags;
 }
 
+// Replace mode: the video keeps its title and description, so those fields are hidden.
+async function setupReplace() {
+  $('fields').hidden = true;
+  $('title').required = false;
+  $('replace-note').hidden = false;
+  $('submit').textContent = 'Upload new version';
+  $('form').hidden = true;
+  const video = await getData(`/data/videos/${replaceId}.json`);
+  if (!video) throw new Error('Video not found. It may have been deleted.');
+  $('heading').textContent = `Replace “${video.title}”`;
+  document.title = `Replace · ${video.title} · dliu.com`;
+  $('form').hidden = false;
+}
+
 const warnLeave = (event) => { event.preventDefault(); event.returnValue = ''; };
 
 async function submit(event) {
@@ -161,18 +180,18 @@ async function submit(event) {
   current = { cancelled: false, xhrs: new Set() };
   try {
     setStatus('Starting…');
+    const newPoster = Boolean(posterBlob) && (!replaceId || $('new-poster').checked);
     const plan = await api('/api/uploads', {
-      title: $('title').value,
-      description: $('description').value,
+      ...(replaceId ? { replace: replaceId } : { title: $('title').value, description: $('description').value }),
       contentType: contentTypeOf(file),
       size: file.size,
       duration: meta.duration,
       width: meta.width,
       height: meta.height,
-      poster: Boolean(posterBlob),
+      poster: newPoster,
     });
     Object.assign(current, plan);
-    if (plan.posterUrl && posterBlob) await putBlob(plan.posterUrl, posterBlob, 'image/jpeg').catch(() => {});
+    if (plan.posterUrl && newPoster) await putBlob(plan.posterUrl, posterBlob, 'image/jpeg').catch(() => {});
     setStatus('Uploading… keep this tab open.');
     const parts = await uploadParts(plan);
     setStatus('Finishing…');
@@ -197,6 +216,7 @@ if (!isOwner()) {
   location.replace(signInUrl());
 } else {
   renderNav();
+  if (replaceId) setupReplace().catch((error) => setStatus(error.message, 'error'));
   $('file').addEventListener('change', () => choose($('file').files[0]));
   const drop = $('drop');
   drop.addEventListener('dragover', (event) => { event.preventDefault(); drop.classList.add('over'); });

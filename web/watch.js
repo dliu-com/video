@@ -45,6 +45,7 @@ function updateEmbed() {
 function setupOwner() {
   $('owner').hidden = false;
   $('edit-title').value = video.title;
+  $('replace').href = `/upload?replace=${encodeURIComponent(video.id)}`;
   $('edit-description').value = video.description || '';
   const status = $('edit-status');
   const busy = (on) => $('owner').querySelectorAll('button').forEach((b) => { b.disabled = on; });

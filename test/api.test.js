@@ -178,6 +178,66 @@ describe('API', () => {
     expect(s3.objects.has(oldKey)).toBe(false);
   });
 
+  test('replacing a video keeps its ID and details, serves the new file at a new key and deletes the old one', async () => {
+    const { call, s3, invalidated } = setup({ now: () => NOW + 86400000 });
+    const { video } = await upload(call, s3);
+    await call('POST', '/api/videos/update', { body: { id: video.id, title: 'Edited' } });
+    const { plan, video: replaced } = await upload(call, s3, { replace: video.id, title: undefined, description: undefined, contentType: 'video/webm', duration: 30, width: 1280, height: 720 });
+    expect(plan.id).toBe(video.id);
+    expect(replaced).toMatchObject({ id: video.id, title: 'Edited', description: 'Line 1\nLine 2', createdAt: video.createdAt, duration: 30, width: 1280, contentType: 'video/webm' });
+    expect(replaced.src).toMatch(new RegExp(`^/v/${video.id}-[A-Za-z0-9_-]{8}\\.webm$`));
+    expect(replaced.poster).not.toBe(video.poster);
+    expect(s3.objects.has(replaced.src.slice(1))).toBe(true);
+    expect(s3.calls.filter((c) => c.name === 'CreateMultipartUploadCommand').pop().input).toMatchObject({ Key: replaced.src.slice(1), CacheControl: 'public, max-age=31536000, immutable' });
+    expect(s3.objects.has(video.src.slice(1))).toBe(false);
+    expect(s3.objects.has(video.poster.slice(1))).toBe(false);
+    expect(s3.objects.has(`pending/${video.id}.json`)).toBe(false);
+    expect(s3.json(`data/videos/${video.id}.json`).src).toBe(replaced.src);
+    expect(s3.json('data/catalog.json').videos.map((v) => v.id)).toEqual([video.id]);
+    expect(invalidated).toEqual([video.src, `/data/videos/${video.id}.json`]);
+
+    // Replacing again, keeping the thumbnail; deleting then removes the current file.
+    const again = (await upload(call, s3, { replace: video.id, poster: false })).video;
+    expect(again.poster).toBe(replaced.poster);
+    expect(s3.objects.has(replaced.src.slice(1))).toBe(false);
+    expect((await call('POST', '/api/videos/delete', { body: { id: video.id } })).statusCode).toBe(200);
+    expect(s3.objects.has(again.src.slice(1))).toBe(false);
+    expect(invalidated).toContain(again.src);
+  });
+
+  test('replace needs an existing video; a new replacement supersedes an unfinished one', async () => {
+    const { call, s3 } = setup();
+    const body = { contentType: 'video/mp4', size: 10, poster: true };
+    expect((await call('POST', '/api/uploads', { body: { ...body, replace: '2020010100' } })).statusCode).toBe(404);
+    expect((await call('POST', '/api/uploads', { body: { ...body, replace: '../x' } })).statusCode).toBe(400);
+    const { video } = await upload(call, s3);
+    const first = (await call('POST', '/api/uploads', { body: { ...body, replace: video.id } })).json;
+    const firstPoster = new URL(first.posterUrl).pathname.slice(1);
+    s3.put(firstPoster, 'jpeg');
+    const second = (await call('POST', '/api/uploads', { body: { ...body, replace: video.id } })).json;
+    expect(s3.uploads.has(first.uploadId)).toBe(false);
+    expect(s3.objects.has(firstPoster)).toBe(false);
+    const parts = [{ partNumber: 1, etag: `"${'a'.repeat(32)}"` }];
+    expect((await call('POST', '/api/uploads/complete', { body: { id: video.id, uploadId: first.uploadId, parts } })).statusCode).toBe(404);
+    // Aborting a replacement leaves the video as it was.
+    expect((await call('POST', '/api/uploads/abort', { body: { id: video.id, uploadId: second.uploadId } })).statusCode).toBe(200);
+    expect(s3.json(`data/videos/${video.id}.json`).src).toBe(video.src);
+    expect(s3.objects.has(video.src.slice(1))).toBe(true);
+    // A new upload never takes a published video's number.
+    expect((await call('POST', '/api/uploads', { body: { ...body, title: 'x' } })).json.id).not.toBe(video.id);
+  });
+
+  test('a video deleted while its replacement uploads stays deleted', async () => {
+    const { call, s3 } = setup();
+    const { video } = await upload(call, s3);
+    const plan = (await call('POST', '/api/uploads', { body: { contentType: 'video/mp4', size: 10, replace: video.id } })).json;
+    await call('POST', '/api/videos/delete', { body: { id: video.id } });
+    const parts = [{ partNumber: 1, etag: `"${'a'.repeat(32)}"` }];
+    expect((await call('POST', '/api/uploads/complete', { body: { id: video.id, uploadId: plan.uploadId, parts } })).statusCode).toBe(404);
+    expect([...s3.objects.keys()].filter((k) => k.startsWith('v/') || k.startsWith('pending/'))).toEqual([]);
+    expect(s3.objects.has(`data/videos/${video.id}.json`)).toBe(false);
+  });
+
   test('delete removes files, details and catalog entry, and invalidates the CDN', async () => {
     const { call, s3, invalidated } = setup();
     const { video } = await upload(call, s3);

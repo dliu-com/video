@@ -78,6 +78,58 @@ function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate
     return found.value;
   }
 
+  /** Cancels an unfinished upload: its multipart upload, pending record and poster. */
+  async function discardPending(pending) {
+    const { AbortMultipartUploadCommand } = sdk();
+    if (pending.uploadId) {
+      await s3.send(new AbortMultipartUploadCommand({
+        Bucket: bucket, Key: store.videoKey(pending.id, pending.ext, pending.fileVersion), UploadId: pending.uploadId,
+      })).catch((error) => { if (!store.isMissing(error) && error.name !== 'NoSuchUpload') throw error; });
+    }
+    await store.deleteKeys(s3, bucket, [
+      store.pendingKey(pending.id),
+      pending.posterVersion && store.posterKey(pending.id, pending.posterVersion),
+    ]);
+  }
+
+  /** Points an existing video at its new file, then deletes the old file (and old poster, if replaced). */
+  async function finishReplacement(pending, key, head) {
+    const { id } = pending;
+    const posterVersion = await posterInfo(id, pending.posterVersion);
+    let old = null;
+    const { index, result } = await store.updateIndex(s3, bucket, (idx) => {
+      const video = idx.videos.find((v) => v.id === id);
+      if (!video) return undefined;
+      old = { ext: video.ext, fileVersion: video.fileVersion, posterVersion: video.posterVersion };
+      Object.assign(video, {
+        ext: pending.ext,
+        fileVersion: pending.fileVersion,
+        contentType: pending.contentType,
+        size: head.ContentLength,
+        duration: pending.duration,
+        width: pending.width,
+        height: pending.height,
+        updatedAt: new Date(now()).toISOString(),
+      }, posterVersion ? { posterVersion } : {});
+      return video;
+    });
+    if (!result) {
+      // Deleted while uploading.
+      await store.deleteKeys(s3, bucket, [key, store.pendingKey(id), pending.posterVersion && store.posterKey(id, pending.posterVersion)]);
+      throw new NotFound('Video not found');
+    }
+    await store.publish(s3, bucket, index, { changed: [id] }, now());
+    const oldFile = store.videoKey(id, old.ext, old.fileVersion);
+    await store.deleteKeys(s3, bucket, [
+      store.pendingKey(id),
+      oldFile !== key && oldFile,
+      posterVersion && old.posterVersion && old.posterVersion !== posterVersion && store.posterKey(id, old.posterVersion),
+    ]);
+    // Nothing links to the old file any more, but it is cached for a year, so drop it from the CDN.
+    await invalidate([`/${oldFile}`, `/${store.videoDataKey(id)}`]);
+    return { video: store.publicVideo(result), replaced: true };
+  }
+
   async function posterInfo(id, version) {
     if (!version) return null;
     const head = await store.headObject(s3, bucket, store.posterKey(id, version));
@@ -90,16 +142,19 @@ function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate
       return { videos: index.videos.slice().sort(store.newestFirst).map(store.publicVideo) };
     },
 
+    /**
+     * Starts an upload. With `replace: <id>`, the file becomes a new version of that video: it keeps its ID,
+     * address, title and description, so links and embeds show the new file. Otherwise a new video is created.
+     */
     async createUpload(body) {
       const ext = CONTENT_TYPES[body.contentType];
       if (!ext) throw new BadRequest(`Unsupported file type. Use one of: ${Object.keys(CONTENT_TYPES).join(', ')}`);
       const size = number(body.size, 'size', { integer: true, min: 1, max: maxBytes });
       if (size === null) throw new BadRequest('size is required');
+      const replace = body.replace === undefined || body.replace === null ? null : videoId(body.replace);
       const pending = {
         id: null,
         ext,
-        title: text(body.title, 'title', 200, { required: true }),
-        description: text(body.description, 'description', 5000),
         contentType: body.contentType,
         size,
         duration: number(body.duration, 'duration', { max: 7 * 24 * 3600 }),
@@ -109,20 +164,32 @@ function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate
         ...partPlan(size),
         createdAt: new Date(now()).toISOString(),
       };
-      // Reserve the number: creating pending/<id>.json only if it does not exist yet means two uploads
-      // started at the same moment cannot get the same ID. A cancelled upload frees its number again.
-      const day = ukDate(now());
-      const index = await store.readIndex(s3, bucket);
-      for (let n = nextNumber(index, day); n < PER_DAY && !pending.id; n += 1) {
-        const candidate = `${day}${String(n).padStart(2, '0')}`;
-        try {
-          await store.writeJson(s3, bucket, store.pendingKey(candidate), { ...pending, id: candidate }, { IfNoneMatch: '*' });
-          pending.id = candidate;
-        } catch (error) {
-          if (!store.isConflict(error)) throw error;
+      if (replace) {
+        const index = await store.readIndex(s3, bucket);
+        if (!index.videos.some((v) => v.id === replace)) throw new NotFound('Video not found');
+        // A new replacement supersedes an unfinished one for the same video.
+        const previous = await store.readJson(s3, bucket, store.pendingKey(replace));
+        if (previous) await discardPending(previous.value);
+        Object.assign(pending, { id: replace, replace: true, fileVersion: newVersion() });
+        await store.writeJson(s3, bucket, store.pendingKey(replace), pending);
+      } else {
+        pending.title = text(body.title, 'title', 200, { required: true });
+        pending.description = text(body.description, 'description', 5000);
+        // Reserve the number: creating pending/<id>.json only if it does not exist yet means two uploads
+        // started at the same moment cannot get the same ID. A cancelled upload frees its number again.
+        const day = ukDate(now());
+        const index = await store.readIndex(s3, bucket);
+        for (let n = nextNumber(index, day); n < PER_DAY && !pending.id; n += 1) {
+          const candidate = `${day}${String(n).padStart(2, '0')}`;
+          try {
+            await store.writeJson(s3, bucket, store.pendingKey(candidate), { ...pending, id: candidate }, { IfNoneMatch: '*' });
+            pending.id = candidate;
+          } catch (error) {
+            if (!store.isConflict(error)) throw error;
+          }
         }
+        if (!pending.id) throw new BadRequest(`No video numbers left for today (${PER_DAY} a day)`);
       }
-      if (!pending.id) throw new BadRequest(`No video numbers left for today (${PER_DAY} a day)`);
       const { id } = pending;
 
       const { CreateMultipartUploadCommand } = sdk();
@@ -130,15 +197,16 @@ function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate
       try {
         created = await s3.send(new CreateMultipartUploadCommand({
           Bucket: bucket,
-          Key: store.videoKey(id, ext),
+          Key: store.videoKey(id, ext, pending.fileVersion),
           ContentType: pending.contentType,
-          // Published numbers are never reused and deletes invalidate the CDN, so the file can be cached for good.
+          // Published numbers are never reused, a replacement gets a new key, and deletes invalidate the CDN,
+          // so the file can be cached for good.
           CacheControl: 'public, max-age=31536000, immutable',
           // Rarely watched videos move to cheaper tiers by themselves.
           StorageClass: 'INTELLIGENT_TIERING',
         }));
       } catch (error) {
-        await store.deleteKeys(s3, bucket, [store.pendingKey(id)]);
+        await store.deleteKeys(s3, bucket, [store.pendingKey(id), pending.posterVersion && store.posterKey(id, pending.posterVersion)]);
         throw error;
       }
       pending.uploadId = created.UploadId;
@@ -159,7 +227,7 @@ function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate
       const urls = {};
       for (const part of parts) {
         if (!Number.isInteger(part) || part < 1 || part > pending.partCount) throw new BadRequest('Invalid part number');
-        urls[part] = sign('PUT', store.videoKey(pending.id, pending.ext), { partNumber: part, uploadId: pending.uploadId });
+        urls[part] = sign('PUT', store.videoKey(pending.id, pending.ext, pending.fileVersion), { partNumber: part, uploadId: pending.uploadId });
       }
       return { urls };
     },
@@ -176,13 +244,14 @@ function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate
       }).sort((a, b) => a.PartNumber - b.PartNumber);
       if (sorted.some((p, i) => p.PartNumber !== i + 1)) throw new BadRequest('Invalid part list');
 
-      const key = store.videoKey(pending.id, pending.ext);
+      const key = store.videoKey(pending.id, pending.ext, pending.fileVersion);
       const { CompleteMultipartUploadCommand } = sdk();
       await s3.send(new CompleteMultipartUploadCommand({
         Bucket: bucket, Key: key, UploadId: pending.uploadId, MultipartUpload: { Parts: sorted },
       }));
       const head = await store.headObject(s3, bucket, key);
       if (!head) throw new Error('Uploaded video is missing');
+      if (pending.replace) return finishReplacement(pending, key, head);
       const stamp = new Date(now()).toISOString();
       const video = {
         id: pending.id,
@@ -211,15 +280,7 @@ function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate
     },
 
     async abortUpload(body) {
-      const pending = await readPending(body.id, body.uploadId);
-      const { AbortMultipartUploadCommand } = sdk();
-      await s3.send(new AbortMultipartUploadCommand({
-        Bucket: bucket, Key: store.videoKey(pending.id, pending.ext), UploadId: pending.uploadId,
-      })).catch((error) => { if (!store.isMissing(error) && error.name !== 'NoSuchUpload') throw error; });
-      await store.deleteKeys(s3, bucket, [
-        store.pendingKey(pending.id),
-        pending.posterVersion && store.posterKey(pending.id, pending.posterVersion),
-      ]);
+      await discardPending(await readPending(body.id, body.uploadId));
       return { aborted: true };
     },
 
@@ -268,9 +329,10 @@ function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate
       });
       if (!result) throw new NotFound('Video not found');
       await store.publish(s3, bucket, index, { removed: [id] }, now());
-      await store.deleteKeys(s3, bucket, [store.videoKey(id, result.ext), result.posterVersion && store.posterKey(id, result.posterVersion)]);
+      const file = store.videoKey(id, result.ext, result.fileVersion);
+      await store.deleteKeys(s3, bucket, [file, result.posterVersion && store.posterKey(id, result.posterVersion)]);
       // The file is cached for a year, so drop it from the CDN too.
-      await invalidate([`/${store.videoKey(id, result.ext)}`, `/t/${id}-*`, `/${store.videoDataKey(id)}`]);
+      await invalidate([`/${file}`, `/t/${id}-*`, `/${store.videoDataKey(id)}`]);
       return { deleted: id };
     },
   };

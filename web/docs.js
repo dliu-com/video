@@ -125,12 +125,13 @@ function architecture(root) {
   add('h2', 'Video IDs');
   add('p', 'A video’s ID is the date it was uploaded (UK time) followed by a two-digit number for that day: 2026102700 is the first video uploaded on 27 October 2026, 2026102701 the second. Its page is video.dliu.com/2026102700.');
   add('p', 'Each upload reserves its number with a conditional write to S3, so two uploads started at the same moment never get the same one. A number is never reused once a video was published under it, even after that video is deleted, because the video file is cached for a year and embeds must never start showing a different video. A cancelled upload frees its number. Up to 100 videos can be uploaded a day.');
+  add('p', 'The owner can replace a video with an updated file. The video keeps its number, address, title and description, so links and embeds show the new file; the new file is stored under a new versioned name, so no cache keeps serving the old one, and the old file is deleted.');
 
   add('h2', 'URLs and where they come from');
   root.append(table(['Path', 'Served from', 'Caching'], [
     [mono('/ /<id> /upload /docs'), 'Site bucket, via the pages function (/<id> serves watch.html)', 'Revalidated on every load'],
     [mono('/embed/<id>'), 'Site bucket (embed.html), framing allowed for dliu.com sites', 'Revalidated on every load'],
-    [mono('/v/<id>.<ext>'), 'Video bucket: the video file', 'One year, immutable; byte ranges'],
+    [mono('/v/<id>.<ext>'), 'Video bucket: the video file; a replacement file gets a new version, /v/<id>-<v>.<ext>', 'One year, immutable; byte ranges'],
     [mono('/t/<id>-<v>.jpg'), 'Video bucket: the poster; a new poster gets a new version', 'One year, immutable'],
     [mono('/data/*.json'), 'Video bucket: catalog.json and videos/<id>.json', 'Revalidated on every load'],
     [mono('/api/* /auth/*'), 'The Lambda, through its function URL', 'Never cached'],

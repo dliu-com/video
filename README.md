@@ -81,7 +81,9 @@ A video's ID is its upload date in UK time plus a two-digit number for that day,
 - `video.dliu.com/2026102700` is the first video uploaded on 27 October 2026.
 - `video.dliu.com/2026102701` is the second.
 
-Each upload reserves its number with a conditional write (`pending/<id>.json`, `If-None-Match: *`), so simultaneous uploads get different numbers. Once a video has been published, its number is never reused, even after the video is deleted. `meta/index.json` records the highest number used each day. This matters because video files are cached for a year and embeds must never switch to a different video. A cancelled upload frees its number. The limit is 100 videos a day. `make smoke` uses up one number on each day it runs.
+Each upload reserves its number with a conditional write (`pending/<id>.json`, `If-None-Match: *`), so simultaneous uploads get different numbers. Once a video has been published, its number is never reused, even after the video is deleted. `meta/index.json` records the highest number used each day. This matters because video files are cached for a year and embeds must never switch to a different video. A cancelled upload frees its number. The limit is 100 videos a day.
+
+The owner can replace a video's file from its page (**Replace video file**, which opens `/upload?replace=<id>`). The video keeps its number, title, description and embeds; optionally the thumbnail too. The new file goes to `v/<id>-<version>.<ext>`, a key the year-long cache has never seen, then `meta/index.json` and `data/videos/<id>.json` point at it, and the old file is deleted and invalidated in CloudFront. Starting another replacement cancels an unfinished one. `make smoke` uses up one number on each day it runs.
 
 ## Embedding
 

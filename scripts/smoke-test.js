@@ -75,6 +75,26 @@ async function main() {
     check(embed.ok && /frame-ancestors 'self' /.test(embed.headers.get('content-security-policy')), 'embed page can be framed');
     await api('/api/videos/update', { id: video.id, title: 'Smoke test (edited)' });
     check((await (await fetch(`${SITE}/data/videos/${video.id}.json`)).json()).title === 'Smoke test (edited)', 'edit published');
+
+    // Replace the file: same ID and title, new file at a new address, old file gone.
+    const newFile = crypto.randomBytes(1024 * 1024);
+    const swap = await api('/api/uploads', { replace: video.id, contentType: 'video/webm', size: newFile.length, duration: 5 });
+    const swapUrls = (await api('/api/uploads/parts', { id: swap.id, uploadId: swap.uploadId, parts: [1] })).urls;
+    const swapPart = await fetch(swapUrls[1], { method: 'PUT', body: newFile });
+    const replaced = (await api('/api/uploads/complete', { id: swap.id, uploadId: swap.uploadId, parts: [{ partNumber: 1, etag: swapPart.headers.get('etag') }] })).video;
+    const details = await (await fetch(`${SITE}/data/videos/${video.id}.json`)).json();
+    check(replaced.id === video.id && details.src === replaced.src && details.src !== video.src && details.title === 'Smoke test (edited)', 'replacement keeps the ID and title, with a new file address');
+    const served = Buffer.from(await (await fetch(SITE + replaced.src)).arrayBuffer());
+    check(served.equals(newFile), 'replacement file served');
+    const oldFile = video.src;
+    video = replaced;
+    // The old file was fetched above, so the edge serves it until the CloudFront invalidation completes.
+    let gone = false;
+    for (let i = 0; i < 40 && !gone; i += 1) {
+      gone = (await fetch(SITE + oldFile, { headers: { range: 'bytes=0-0' } })).status >= 400;
+      if (!gone) await new Promise((r) => setTimeout(r, 5000));
+    }
+    check(gone, 'old file removed and invalidated');
   } finally {
     if (keep) {
       console.log(`kept ${SITE}/${video.id}`);

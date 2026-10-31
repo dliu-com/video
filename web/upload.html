@@ -14,7 +14,8 @@
     <nav></nav>
   </header>
   <main class="narrow">
-    <h1>Upload a video</h1>
+    <h1 id="heading">Upload a video</h1>
+    <p class="muted" id="replace-note" hidden>The new file takes the old one’s place: the address, title, description and embeds stay the same, and the old file is deleted.</p>
     <form id="form">
       <label class="drop" id="drop" for="file">
         <input type="file" id="file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v,video/ogg,.mp4,.m4v,.mov,.webm,.ogv">
@@ -31,10 +32,13 @@
             <video id="probe" muted playsinline preload="metadata" hidden></video>
           </div>
         </div>
-        <label for="title">Title</label>
-        <input type="text" id="title" maxlength="200" required>
-        <label for="description">Description</label>
-        <textarea id="description" maxlength="5000"></textarea>
+        <div id="fields">
+          <label for="title">Title</label>
+          <input type="text" id="title" maxlength="200" required>
+          <label for="description">Description</label>
+          <textarea id="description" maxlength="5000"></textarea>
+        </div>
+        <label class="inline" id="new-poster-box" hidden><input type="checkbox" id="new-poster" checked> Replace the thumbnail with this one</label>
         <p class="row">
           <button class="primary" type="submit" id="submit">Upload</button>
           <button type="button" id="cancel" hidden>Cancel upload</button>
