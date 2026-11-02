@@ -381,7 +381,7 @@ security(document.getElementById('security'));
 function show(scroll) {
   const current = TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : TABS[0];
   for (const id of TABS) document.getElementById(id).hidden = id !== current;
-  for (const link of document.querySelectorAll('.info-tabs a')) {
+  for (const link of document.querySelectorAll('.dl-tabs a')) {
     if (link.dataset.tab === current) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   }

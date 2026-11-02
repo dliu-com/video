@@ -25,6 +25,17 @@ test('every app page has the shared header with the DL icon, and the shared foot
   }
 });
 
+test('docs pages load the shared docs stylesheet and tabs, and the app has no docs stylesheet of its own', () => {
+  for (const html of ['docs', 'docs-api']) {
+    const page = read(`web/${html}.html`);
+    expect(page).toContain('<link rel="stylesheet" href="https://files.dliu.com/dliu.com/ui/v1/dl-docs.css">');
+    expect(page).toContain('<main class="dl-main dl-docs-main">');
+    expect(page).toContain('<nav class="dl-tabs" aria-label="Docs sections">');
+    expect(page).not.toContain('/docs.css');
+  }
+  expect(fs.existsSync(path.join(__dirname, '..', 'web/docs.css'))).toBe(false);
+});
+
 test('the app stylesheet leaves the header, buttons and palette to the shared stylesheet', () => {
   const css = read('web/style.css');
   expect(css).not.toMatch(/header\.top|\.brand|^\s*button|\.button\b|--accent:/m);
