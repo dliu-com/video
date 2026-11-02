@@ -137,6 +137,10 @@ function architecture(root) {
     [mono('/api/* /auth/*'), 'The Lambda, through its function URL', 'Never cached'],
   ]));
 
+  add('h2', 'Clearing the CDN');
+  add('p', 'Only video files and posters are kept at the edge, and they are never rewritten under the same name: a replacement file or new poster gets a new versioned name. Replacing or deleting a video invalidates the old paths in CloudFront. Pages, scripts, styles and the JSON files are revalidated on every load, so there is nothing to clear.');
+  add('p', 'So this site has no automatic clearing (S3 events triggering CloudFront invalidations). It would mostly fire for new uploads, which were never cached, and would use up the 1,000 free invalidation paths a month that all the dliu.com sites share. Change videos through the website or API, not the S3 console: a file overwritten under the same name stays in viewers’ browsers for up to a year.');
+
   add('h2', 'Data in the video bucket');
   root.append(table(['Key', 'What it holds', 'Public'], [
     [mono('meta/index.json'), 'Source of truth: every video with all its fields. Written with conditional writes, so two edits cannot overwrite each other', 'No'],
@@ -248,7 +252,7 @@ function cost(root) {
     ],
   }));
 
-  add('p', 'CloudFront uses price class 100 (edge locations in North America, Europe and Israel), the cheapest. Viewers elsewhere still play videos, from the nearest of those locations. Prices checked in October 2026.', 'dg-note');
+  add('p', 'CloudFront serves from all edge locations (price class All), over HTTP/2 and HTTP/3, because most viewers are in Europe and Asia. Within the free 1 TB a month it costs nothing extra. Prices checked in October 2026.', 'dg-note');
   source(root, 'Source: dliu-com/video (lib/video-stack.ts, lambda/api/videos.js).');
 }
 

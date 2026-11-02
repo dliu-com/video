@@ -210,6 +210,22 @@ Only the sites in `config/site.json` → `embedAncestors` may frame the player (
 
 If the embedding site has its own Content Security Policy, it needs `frame-src https://video.dliu.com`.
 
+## Caching and CDN clearing
+
+CloudFront serves from all edge locations (price class All) over HTTP/2 and HTTP/3.
+
+| Bucket and path | Kept at the edge | How a change is cleared |
+| --- | --- | --- |
+| Video bucket `v/*` (video files) | Up to a year (`public, max-age=31536000, immutable`) | Never overwritten: a replacement gets a new versioned key. Replace and delete invalidate the old paths from the Lambda. |
+| Video bucket `t/*` (posters) | Up to a year (same header) | Every poster has a versioned key. Delete invalidates `/t/<id>-*`. |
+| Video bucket `data/*` (catalog and video details) | Revalidated with S3 on every request (`no-cache`) | Nothing to clear. Replace and delete also invalidate the video's details. |
+| Site bucket (pages, scripts, styles) | Revalidated on every request (`no-cache`, set by the deploy) | Nothing to clear. |
+| `/api/*`, `/auth/*` | Never cached | Not applicable. |
+
+There is no automatic clearing (S3 EventBridge → invalidation Lambda), on purpose. All of the dliu.com sites use that pattern only for buckets whose edge-cached objects can change outside a deploy without an invalidation. Here, the only edge-cached objects are video files and posters. The app never rewrites them under the same key, and it already invalidates the paths it removes. A rule would mostly fire for new uploads, which were never cached, and would spend invalidation paths from the 1,000 free each month that all the sites share. The other prefixes are no-cache, and `meta/` and `pending/` aren't served.
+
+Change videos through the website or the API, not the S3 console. A file overwritten in place under the same key would stay in CloudFront and in viewers' browsers for up to a year, because of the `immutable` header. Clearing CloudFront couldn't fix the browser copies.
+
 ## Testing
 
 ```sh

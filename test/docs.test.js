@@ -89,3 +89,14 @@ test('Video documentation delegates generic credential and header tutorials to t
     expect(text).not.toMatch(/\.dliu_token|VIDEO_API_ACCESS_TOKEN|VIDEO_API_TOKEN_FILE|expires_at=|Authorization:|Save file|Copy or Save|23:59:59|auth\.dliu\.com\/redirect\.html/);
   }
 });
+
+test('docs record the CDN caching and automatic-clearing decision and the current price class', () => {
+  const text = Object.values(renderDocs()).map((article) => article.textContent).join('\n');
+  expect(text).toContain('Clearing the CDN');
+  expect(text).toContain('no automatic clearing');
+  expect(text).toContain('price class All');
+  expect(text).not.toContain('price class 100');
+  const readme = fs.readFileSync(path.join(__dirname, '../README.md'), 'utf8');
+  expect(readme).toContain('## Caching and CDN clearing');
+  expect(readme).toContain('There is no automatic clearing');
+});
