@@ -13,16 +13,16 @@ test('every page loads the shared dliu.com stylesheet before its own', () => {
   }
 });
 
-test('every app page has the shared header with the DL icon, and the shared footer', () => {
+test('every app page has the shared header with the video logo, and the shared footer with the DL logo', () => {
   for (const html of ['index', 'watch', 'upload', 'docs', 'docs-api']) {
     const page = read(`web/${html}.html`);
-    expect(page).toContain(`<link rel="icon" type="image/png" href="${DL_ICON}">`);
+    expect(page).toContain('<link rel="icon" href="/logo.svg" type="image/svg+xml">');
     expect(page).toContain('<body class="dl-page">');
-    expect(page).toContain(`<a class="dl-logo" href="https://dliu.com" aria-label="dliu.com"><img src="${DL_ICON}"`);
-    expect(page).toContain('<a class="dl-brand" href="/">Video</a>');
+    expect(page).toContain('<a class="dl-brand" href="/"><img class="dl-logo" src="/logo.svg" alt="" width="32" height="32">Video</a>');
     expect(page).toMatch(/<main class="dl-main[" ]/);
-    expect(page).toContain('<footer class="dl-footer"><a href="https://dliu.com">dliu.com</a>');
+    expect(page).toMatch(new RegExp(`<footer class="dl-footer">\\s*<a class="dl-footer-logo" href="https://dliu.com" aria-label="dliu.com"><img src="${DL_ICON}"`));
   }
+  expect(fs.existsSync(path.join(__dirname, '..', 'web/logo.svg'))).toBe(true);
 });
 
 test('docs pages load the shared docs stylesheet and tabs, and the app has no docs stylesheet of its own', () => {
