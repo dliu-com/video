@@ -154,8 +154,9 @@ export class VideoStack extends Stack {
         contentSecurityPolicy: [
           "default-src 'self'",
           "script-src 'self'",
-          "style-src 'self'",
-          "img-src 'self' data: blob:",
+          // Shared dliu.com look (dliu-com/shared-resources): only its stylesheet folder and the DL icon.
+          "style-src 'self' https://files.dliu.com/dliu.com/ui/",
+          "img-src 'self' data: blob: https://files.dliu.com/dliu.com/",
           "media-src 'self' blob:",
           `connect-src 'self' https://${videoBucket.bucketRegionalDomainName}`,
           `frame-ancestors ${frameAncestors}`,

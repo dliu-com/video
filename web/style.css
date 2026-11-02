@@ -1,86 +1,30 @@
-:root {
-  color-scheme: light;
-  --bg: #ffffff;
-  --panel: #f6f7f9;
-  --panel-2: #ffffff;
-  --line: #dfe3e8;
-  --text: #1c2024;
-  --muted: #646b75;
-  --accent: #2563eb;
-  --accent-2: #1d4ed8;
-  --danger: #d1242f;
-  --ok: #1a7f37;
-  --radius: 12px;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+/* Video-specific styles. The shared dliu.com look (colours, header, buttons, sign-in, fields, layout, footer)
+   comes from https://files.dliu.com/dliu.com/ui/v1/dl.css, loaded before this file. */
+
+/* Wider pages on big screens, for the video grid */
+@media (min-width: 1600px) {
+  :root { --dl-main-width: 1520px; }
 }
 
-* { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-html, body { margin: 0; background: var(--bg); color: var(--text); }
-body { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
-img, video { max-width: 100%; }
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
-[hidden] { display: none !important; }
+h1 { font-size: 24px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.row.spread { justify-content: space-between; }
 
-header.top {
-  display: flex; align-items: center; gap: 12px; padding: 12px max(24px, env(safe-area-inset-right)) 12px max(24px, env(safe-area-inset-left));
-  padding-top: max(12px, env(safe-area-inset-top));
-  border-bottom: 1px solid var(--line); background: rgba(255, 255, 255, 0.92);
-  position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px);
-}
-.brand { font-weight: 700; font-size: 18px; color: var(--text); display: flex; align-items: center; gap: 8px; }
-.brand:hover { text-decoration: none; }
-.brand .logo { width: 26px; height: 26px; flex: none; }
-header.top nav { margin-left: auto; display: flex; gap: 8px; align-items: center; }
-header.top nav .button { white-space: nowrap; }
-
-main {
-  width: 100%; max-width: 1280px; margin: 0 auto; flex: 1;
-  padding: 24px max(24px, env(safe-area-inset-right)) 24px max(24px, env(safe-area-inset-left));
-}
-main.narrow { max-width: 760px; }
-footer.bottom { color: var(--muted); font-size: 13px; text-align: center; padding: 24px; padding-bottom: max(24px, env(safe-area-inset-bottom)); }
-footer.bottom a { color: var(--muted); }
-
-h1 { font-size: 24px; margin: 0 0 16px; }
-h2 { font-size: 18px; margin: 24px 0 12px; }
-.muted { color: var(--muted); }
-.error { color: var(--danger); }
-.success { color: var(--ok); }
-
-button, .button {
-  font: inherit; font-size: 14px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line);
-  background: var(--panel-2); color: var(--text); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
-}
-button:hover, .button:hover { border-color: #b8c0ca; background: var(--panel); text-decoration: none; }
-button.primary, .button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-button.primary:hover, .button.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
-.button.sign-in { padding: 9px 18px; font-weight: 600; box-shadow: 0 1px 3px rgba(37, 99, 235, 0.35); }
-.button.docs { padding: 9px 16px; font-weight: 600; }
-.button.docs[aria-current="page"] { border-color: var(--accent); color: var(--accent); }
-button.danger { color: var(--danger); }
-button:disabled { opacity: 0.55; cursor: default; }
-
-input[type=text], input[type=number], textarea, select {
-  font: inherit; width: 100%; padding: 9px 11px; border-radius: 8px; border: 1px solid var(--line);
-  background: var(--panel-2); color: var(--text);
-}
-input:focus, textarea:focus, select:focus { outline: 2px solid rgba(37, 99, 235, 0.35); border-color: var(--accent); }
+/* Forms */
+label { display: block; font-size: 13px; color: var(--dl-muted); margin: 14px 0 6px; }
+label.inline { display: inline-flex; align-items: center; gap: 6px; margin: 0; color: var(--dl-text); }
 textarea { min-height: 110px; resize: vertical; }
-textarea.code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; min-height: 90px; }
-label { display: block; font-size: 13px; color: var(--muted); margin: 14px 0 6px; }
-label.inline { display: inline-flex; align-items: center; gap: 6px; margin: 0; color: var(--text); }
+textarea.code { font-family: var(--dl-mono); font-size: 12px; min-height: 90px; }
 
 /* Home grid */
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 22px; }
-.card { color: var(--text); display: block; }
+.card { color: var(--dl-text); display: block; }
 .card:hover { text-decoration: none; }
 @media (hover: hover) {
   .card:hover .thumb img { transform: scale(1.03); }
 }
 .thumb {
-  position: relative; aspect-ratio: 16 / 9; border-radius: var(--radius); overflow: hidden;
+  position: relative; aspect-ratio: 16 / 9; border-radius: var(--dl-radius); overflow: hidden;
   background: linear-gradient(135deg, #e3e8ef, #cfd6df);
 }
 .thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s ease; display: block; }
@@ -90,8 +34,8 @@ label.inline { display: inline-flex; align-items: center; gap: 6px; margin: 0; c
   font-size: 12px; padding: 2px 6px; border-radius: 4px; font-variant-numeric: tabular-nums;
 }
 .card h3 { font-size: 15px; margin: 10px 0 4px; line-height: 1.35; overflow-wrap: anywhere; }
-.card .meta { font-size: 13px; color: var(--muted); }
-.empty { text-align: center; padding: 80px 20px; color: var(--muted); }
+.card .meta { font-size: 13px; color: var(--dl-muted); }
+.empty { text-align: center; padding: 80px 20px; color: var(--dl-muted); }
 
 /* Watch page */
 /* The box takes the video's own shape (--ratio, set by watch.js) and never grows taller than most of the screen,
@@ -99,39 +43,35 @@ label.inline { display: inline-flex; align-items: center; gap: 6px; margin: 0; c
 .player {
   --ratio: 1.7778; --max-h: 78vh;
   width: min(100%, calc(var(--max-h) * var(--ratio))); aspect-ratio: var(--ratio); margin: 0 auto;
-  background: #000; border-radius: var(--radius); overflow: hidden; display: flex;
+  background: #000; border-radius: var(--dl-radius); overflow: hidden; display: flex;
 }
 @supports (height: 1dvh) { .player { --max-h: 78dvh; } }
 .player video { width: 100%; height: 100%; background: #000; }
 .watch-title { font-size: 22px; margin: 16px 0 6px; overflow-wrap: anywhere; }
-.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-.row.spread { justify-content: space-between; }
 .description { white-space: pre-line; overflow-wrap: anywhere; line-height: 1.55; margin-top: 14px; }
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; margin-top: 18px; }
-.panel h2 { margin-top: 0; }
+.dl-panel.box { margin-top: 18px; }
+.dl-panel.box h2 { margin-top: 0; }
 .toast {
-  position: fixed; left: 50%; bottom: max(24px, env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--panel-2);
+  position: fixed; left: 50%; bottom: max(24px, env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--dl-surface);
   width: max-content; max-width: calc(100vw - 32px); text-align: center;
-  border: 1px solid var(--line); padding: 10px 16px; border-radius: 8px; z-index: 50;
+  border: 1px solid var(--dl-line); padding: 10px 16px; border-radius: var(--dl-radius-small); z-index: 50;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
 /* Upload page */
 .drop {
-  border: 2px dashed var(--line); border-radius: var(--radius); padding: 36px; text-align: center; cursor: pointer;
-  background: var(--panel);
+  border: 2px dashed var(--dl-line); border-radius: var(--dl-radius); padding: 36px; text-align: center; cursor: pointer;
+  background: var(--dl-panel);
 }
-.drop.over { border-color: var(--accent); }
+.drop.over { border-color: var(--dl-accent); }
 .drop input { display: none; }
 .preview { display: grid; grid-template-columns: 240px 1fr; gap: 16px; align-items: start; margin-top: 18px; }
-.preview img { width: 100%; border-radius: 8px; background: #000; aspect-ratio: 16 / 9; object-fit: contain; }
-.progress { height: 10px; background: var(--line); border-radius: 6px; overflow: hidden; margin: 12px 0 6px; }
-.progress > div { height: 100%; width: 0; background: var(--accent); transition: width 0.2s; }
+.preview img { width: 100%; border-radius: var(--dl-radius-small); background: #000; aspect-ratio: 16 / 9; object-fit: contain; }
+.progress { height: 10px; background: var(--dl-line); border-radius: 6px; overflow: hidden; margin: 12px 0 6px; }
+.progress > div { height: 100%; width: 0; background: var(--dl-accent); transition: width 0.2s; }
 
 /* Phones and small tablets */
 @media (max-width: 640px) {
-  header.top { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
-  main { padding: 16px max(16px, env(safe-area-inset-right)) 16px max(16px, env(safe-area-inset-left)); }
   h1 { font-size: 21px; }
   .grid { gap: 18px; }
   .preview { grid-template-columns: 1fr; }
@@ -140,32 +80,21 @@ label.inline { display: inline-flex; align-items: center; gap: 6px; margin: 0; c
   .player {
     --w: min(100vw, calc(var(--max-h) * var(--ratio)));
     width: var(--w); max-width: none; border-radius: 0;
-    margin-left: max(-16px, calc((100% - var(--w)) / 2)); margin-right: 0;
+    margin-left: max(calc(-1 * var(--dl-gutter)), calc((100% - var(--w)) / 2)); margin-right: 0;
   }
   .watch-title { font-size: 19px; }
   .row.spread { align-items: flex-start; }
-  .panel { padding: 14px; }
-}
-@media (max-width: 400px) {
-  .brand .name { display: none; }
-  header.top nav { gap: 6px; }
-  header.top nav .button { padding: 8px 10px; }
+  .dl-panel.box { padding: 14px; }
 }
 /* Landscape phones: let the video fill the height under the header */
 @media (max-height: 500px) and (orientation: landscape) {
   .player { --max-h: calc(100vh - 70px); }
   @supports (height: 1dvh) { .player { --max-h: calc(100dvh - 70px); } }
 }
-/* Touch screens: bigger targets, and 16px text so iOS doesn't zoom into fields */
+/* Touch screens: bigger targets */
 @media (pointer: coarse) {
-  button, .button { min-height: 44px; }
-  input[type=text], input[type=number], textarea, select { font-size: 16px; }
   label.inline { min-height: 32px; }
   input[type=checkbox] { width: 20px; height: 20px; }
-}
-/* Big screens */
-@media (min-width: 1600px) {
-  main { max-width: 1520px; }
 }
 
 /* Embed player */

@@ -99,20 +99,20 @@ export async function copyText(text, message = 'Copied') {
 
 /** Fills the header's nav: Docs for everyone, then Upload and Sign out for the owner or Sign in for viewers. */
 export function renderNav() {
-  const nav = document.querySelector('header.top nav');
+  const nav = document.querySelector('.dl-header .dl-nav');
   if (!nav) return;
   nav.replaceChildren();
-  const docs = el('a', { class: 'button docs', href: '/docs' }, 'Docs');
+  const docs = el('a', { class: 'dl-button', href: '/docs' }, 'Docs');
   const page = location.pathname.replace(/\/$/, '');
   if (page === '/docs' || page === '/docs/api') docs.setAttribute('aria-current', 'page');
   nav.append(docs);
   if (isOwner()) {
     nav.append(
-      el('a', { class: 'button primary', href: '/upload' }, '＋ Upload'),
-      el('a', { class: 'button', href: '/auth/logout' }, 'Sign out'),
+      el('a', { class: 'dl-button dl-button-primary', href: '/upload' }, '＋ Upload'),
+      el('a', { class: 'dl-button', href: '/auth/logout' }, 'Sign out'),
     );
   } else {
-    nav.append(el('a', { class: 'button primary sign-in', href: signInUrl() }, 'Sign in'));
+    nav.append(el('a', { class: 'dl-button dl-signin', href: signInUrl() }, 'Sign in'));
   }
 }
 

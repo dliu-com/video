@@ -75,7 +75,7 @@ export async function loadApiDocs(root) {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     root.replaceChildren(renderApiMarkdown(await response.text()));
   } catch (error) {
-    root.replaceChildren(el('p', { class: 'error', role: 'alert' },
+    root.replaceChildren(el('p', { class: 'dl-error', role: 'alert' },
       `Could not load the API reference: ${error.message}. `, el('a', { href: '/docs/api.md' }, 'Read the Markdown directly')));
   }
 }

@@ -54,6 +54,14 @@ test('only the embed player can be framed, and only by the configured sites', ()
   expect(headers('EmbedHeaders').FrameOptions).toBeUndefined();
 });
 
+test('pages may load only the shared dliu.com stylesheet folder and DL icon from files.dliu.com, and no shared scripts', () => {
+  for (const policy of ['PageHeaders', 'EmbedHeaders']) {
+    expect(csp(policy)).toContain("style-src 'self' https://files.dliu.com/dliu.com/ui/;");
+    expect(csp(policy)).toContain("img-src 'self' data: blob: https://files.dliu.com/dliu.com/;");
+    expect(csp(policy)).toContain("script-src 'self';");
+  }
+});
+
 test('the browser API Lambda is invoked through CloudFront and can invalidate it', () => {
   template.hasResourceProperties('AWS::Lambda::Url', { AuthType: 'AWS_IAM' });
   template.hasResourceProperties('AWS::Lambda::Function', Match.objectLike({

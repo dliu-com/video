@@ -35,6 +35,6 @@ async function load() {
 renderNav();
 load().catch((error) => {
   const status = document.getElementById('status');
-  status.className = 'error';
+  status.className = 'dl-error';
   status.textContent = error.message;
 });

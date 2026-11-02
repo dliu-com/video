@@ -170,7 +170,7 @@ test('API navigation is linked from docs, keeps the website header active and pr
 
 test('every app menu has exactly one Docs button to /docs, for viewers and the owner, without duplicates', () => {
   for (const html of ['index', 'watch', 'upload', 'docs', 'docs-api']) {
-    expect(read(`web/${html}.html`)).toMatch(/<header class="top">[\s\S]*<nav( aria-label="Site")?><\/nav>[\s\S]*<\/header>/);
+    expect(read(`web/${html}.html`)).toMatch(/<header class="dl-header">[\s\S]*<nav class="dl-nav" aria-label="Site"><\/nav>[\s\S]*<\/header>/);
   }
   for (const pathname of ['/', '/2026102700', '/upload', '/docs', '/docs/api']) {
     for (const cookie of ['', 'video_owner=1']) {
@@ -183,7 +183,7 @@ test('every app menu has exactly one Docs button to /docs, for viewers and the o
       const docs = nav.children.filter((child) => child.attributes.href === '/docs');
       expect(docs).toHaveLength(1);
       expect(nav.children[0]).toBe(docs[0]);
-      expect(docs[0].className).toBe('button docs');
+      expect(docs[0].className).toBe('dl-button');
       expect(docs[0].textContent).toBe('Docs');
       expect(docs[0].attributes['aria-current']).toBe(pathname.startsWith('/docs') ? 'page' : undefined);
       expect(nav.children.map((child) => child.attributes.href)).toEqual(cookie

@@ -20,7 +20,7 @@ function contentTypeOf(f) {
 }
 
 function setStatus(text, kind = 'muted') {
-  $('status').className = kind;
+  $('status').className = `dl-${kind}`;
   $('status').textContent = text;
 }
 

@@ -4,23 +4,25 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Upload · Video · dliu.com</title>
-  <link rel="icon" href="/logo.svg" type="image/svg+xml">
+  <link rel="icon" type="image/png" href="https://files.dliu.com/dliu.com/favicon.png">
+  <link rel="stylesheet" href="https://files.dliu.com/dliu.com/ui/v1/dl.css">
   <link rel="stylesheet" href="/style.css">
   <script type="module" src="/upload.js"></script>
 </head>
-<body>
-  <header class="top">
-    <a class="brand" href="/" aria-label="Video home"><img class="logo" src="/logo.svg" alt=""><span class="name">Video</span></a>
-    <nav></nav>
+<body class="dl-page">
+  <header class="dl-header">
+    <a class="dl-logo" href="https://dliu.com" aria-label="dliu.com"><img src="https://files.dliu.com/dliu.com/favicon.png" alt="DL" width="32" height="32"></a>
+    <a class="dl-brand" href="/">Video</a>
+    <nav class="dl-nav" aria-label="Site"></nav>
   </header>
-  <main class="narrow">
+  <main class="dl-main dl-narrow">
     <h1 id="heading">Upload a video</h1>
-    <p class="muted" id="replace-note" hidden>The new file takes the old one’s place: the address, title, description and embeds stay the same, and the old file is deleted.</p>
+    <p class="dl-muted" id="replace-note" hidden>The new file takes the old one’s place: the address, title, description and embeds stay the same, and the old file is deleted.</p>
     <form id="form">
       <label class="drop" id="drop" for="file">
         <input type="file" id="file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v,video/ogg,.mp4,.m4v,.mov,.webm,.ogv">
         <strong>Choose a video</strong> or drop it here<br>
-        <span class="muted">MP4 (H.264/AAC) plays everywhere. The file is served as uploaded, with no re-encoding.</span>
+        <span class="dl-muted">MP4 (H.264/AAC) plays everywhere. The file is served as uploaded, with no re-encoding.</span>
       </label>
 
       <div id="details" hidden>
@@ -28,7 +30,7 @@
           <img id="poster" alt="Thumbnail preview">
           <div>
             <div id="file-info"></div>
-            <p class="muted" id="poster-note"></p>
+            <p class="dl-muted" id="poster-note"></p>
             <video id="probe" muted playsinline preload="metadata" hidden></video>
           </div>
         </div>
@@ -40,17 +42,18 @@
         </div>
         <label class="inline" id="new-poster-box" hidden><input type="checkbox" id="new-poster" checked> Replace the thumbnail with this one</label>
         <p class="row">
-          <button class="primary" type="submit" id="submit">Upload</button>
-          <button type="button" id="cancel" hidden>Cancel upload</button>
+          <button class="dl-button dl-button-primary" type="submit" id="submit">Upload</button>
+          <button class="dl-button" type="button" id="cancel" hidden>Cancel upload</button>
         </p>
       </div>
 
       <div id="progress-box" hidden>
         <div class="progress"><div id="bar"></div></div>
-        <div class="muted" id="progress-text"></div>
+        <div class="dl-muted" id="progress-text"></div>
       </div>
       <p id="status"></p>
     </form>
   </main>
+  <footer class="dl-footer"><a href="https://dliu.com">dliu.com</a> · <a href="/">All videos</a> · <a href="/docs">How it works</a></footer>
 </body>
 </html>

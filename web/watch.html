@@ -4,32 +4,34 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Video · dliu.com</title>
-  <link rel="icon" href="/logo.svg" type="image/svg+xml">
+  <link rel="icon" type="image/png" href="https://files.dliu.com/dliu.com/favicon.png">
+  <link rel="stylesheet" href="https://files.dliu.com/dliu.com/ui/v1/dl.css">
   <link rel="stylesheet" href="/style.css">
   <script type="module" src="/watch.js"></script>
 </head>
-<body>
-  <header class="top">
-    <a class="brand" href="/" aria-label="Video home"><img class="logo" src="/logo.svg" alt=""><span class="name">Video</span></a>
-    <nav></nav>
+<body class="dl-page">
+  <header class="dl-header">
+    <a class="dl-logo" href="https://dliu.com" aria-label="dliu.com"><img src="https://files.dliu.com/dliu.com/favicon.png" alt="DL" width="32" height="32"></a>
+    <a class="dl-brand" href="/">Video</a>
+    <nav class="dl-nav" aria-label="Site"></nav>
   </header>
-  <main>
-    <p class="muted" id="status">Loading…</p>
+  <main class="dl-main">
+    <p class="dl-muted" id="status">Loading…</p>
     <section id="video" hidden>
       <div class="player"><video id="player" controls playsinline preload="metadata"></video></div>
       <h1 class="watch-title" id="title"></h1>
       <div class="row spread">
-        <span class="muted" id="meta"></span>
+        <span class="dl-muted" id="meta"></span>
         <div class="row">
-          <button id="share" type="button">🔗 Copy link</button>
-          <button id="embed-toggle" type="button">&lt;/&gt; Embed</button>
+          <button class="dl-button" id="share" type="button">🔗 Copy link</button>
+          <button class="dl-button" id="embed-toggle" type="button">&lt;/&gt; Embed</button>
         </div>
       </div>
       <div class="description" id="description"></div>
 
-      <div class="panel" id="embed" hidden>
+      <div class="dl-panel box" id="embed" hidden>
         <h2>Embed this video</h2>
-        <p class="muted">Paste this HTML into a page on dliu.com or one of its subdomains (for example, a blog post).</p>
+        <p class="dl-muted">Paste this HTML into a page on dliu.com or one of its subdomains (for example, a blog post).</p>
         <div class="row">
           <label class="inline"><input type="checkbox" id="embed-start"> Start at current time</label>
           <label class="inline"><input type="checkbox" id="embed-autoplay"> Autoplay (muted)</label>
@@ -37,10 +39,10 @@
         </div>
         <label for="embed-code">HTML</label>
         <textarea class="code" id="embed-code" readonly></textarea>
-        <div class="row"><button class="primary" id="embed-copy" type="button">Copy HTML</button><a id="embed-open" target="_blank" rel="noopener">Open player</a></div>
+        <div class="row"><button class="dl-button dl-button-primary" id="embed-copy" type="button">Copy HTML</button><a id="embed-open" target="_blank" rel="noopener">Open player</a></div>
       </div>
 
-      <div class="panel" id="owner" hidden>
+      <div class="dl-panel box" id="owner" hidden>
         <h2>Edit</h2>
         <form id="edit-form">
           <label for="edit-title">Title</label>
@@ -48,16 +50,16 @@
           <label for="edit-description">Description</label>
           <textarea id="edit-description" maxlength="5000"></textarea>
           <p class="row">
-            <button class="primary" type="submit">Save</button>
-            <button type="button" id="poster-frame">🖼 Use current frame as thumbnail</button>
-            <a class="button" id="replace">⟳ Replace video file</a>
-            <button type="button" class="danger" id="delete">Delete video</button>
+            <button class="dl-button dl-button-primary" type="submit">Save</button>
+            <button class="dl-button" type="button" id="poster-frame">🖼 Use current frame as thumbnail</button>
+            <a class="dl-button" id="replace">⟳ Replace video file</a>
+            <button type="button" class="dl-button dl-button-danger" id="delete">Delete video</button>
           </p>
-          <p class="muted" id="edit-status"></p>
+          <p class="dl-muted" id="edit-status"></p>
         </form>
       </div>
     </section>
   </main>
-  <footer class="bottom"><a href="/">All videos</a> · <a href="/docs">How it works</a></footer>
+  <footer class="dl-footer"><a href="https://dliu.com">dliu.com</a> · <a href="/">All videos</a> · <a href="/docs">How it works</a></footer>
 </body>
 </html>

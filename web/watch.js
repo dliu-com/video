@@ -53,17 +53,17 @@ function setupOwner() {
   $('edit-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     busy(true);
-    status.className = 'muted';
+    status.className = 'dl-muted';
     status.textContent = 'Saving…';
     try {
       const result = await api('/api/videos/update', {
         id: video.id, title: $('edit-title').value, description: $('edit-description').value,
       });
       showVideo(result.video);
-      status.className = 'success';
+      status.className = 'dl-success';
       status.textContent = 'Saved.';
     } catch (error) {
-      status.className = 'error';
+      status.className = 'dl-error';
       status.textContent = error.message;
     } finally {
       busy(false);
@@ -72,7 +72,7 @@ function setupOwner() {
 
   $('poster-frame').addEventListener('click', async () => {
     busy(true);
-    status.className = 'muted';
+    status.className = 'dl-muted';
     status.textContent = 'Saving thumbnail…';
     try {
       const player = $('player');
@@ -83,10 +83,10 @@ function setupOwner() {
       const result = await api('/api/videos/update', { id: video.id, posterVersion: upload.version });
       showVideo(result.video);
       player.poster = result.video.poster;
-      status.className = 'success';
+      status.className = 'dl-success';
       status.textContent = 'Thumbnail updated.';
     } catch (error) {
-      status.className = 'error';
+      status.className = 'dl-error';
       status.textContent = error.message;
     } finally {
       busy(false);
@@ -100,7 +100,7 @@ function setupOwner() {
       await api('/api/videos/delete', { id: video.id });
       location.href = '/';
     } catch (error) {
-      status.className = 'error';
+      status.className = 'dl-error';
       status.textContent = error.message;
       busy(false);
     }
@@ -130,6 +130,6 @@ async function load() {
 
 renderNav();
 load().catch((error) => {
-  $('status').className = 'error';
+  $('status').className = 'dl-error';
   $('status').textContent = error.message;
 });
