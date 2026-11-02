@@ -103,7 +103,8 @@ export function renderNav() {
   if (!nav) return;
   nav.replaceChildren();
   const docs = el('a', { class: 'button docs', href: '/docs' }, 'Docs');
-  if (location.pathname.replace(/\/$/, '') === '/docs') docs.setAttribute('aria-current', 'page');
+  const page = location.pathname.replace(/\/$/, '');
+  if (page === '/docs' || page === '/docs/api') docs.setAttribute('aria-current', 'page');
   nav.append(docs);
   if (isOwner()) {
     nav.append(

@@ -1,6 +1,8 @@
 'use strict';
 
 const auth = require('./auth');
+const apiAccess = require('./api-access');
+const ROUTES = require('./routes.json');
 const { loadConfig, NotConfigured } = require('./config');
 const { BadRequest, NotFound, createVideos } = require('./videos');
 
@@ -69,16 +71,6 @@ async function invalidateWithCloudFront(paths) {
   }));
 }
 
-const ROUTES = {
-  'POST /api/uploads': 'createUpload',
-  'POST /api/uploads/parts': 'signParts',
-  'POST /api/uploads/complete': 'completeUpload',
-  'POST /api/uploads/abort': 'abortUpload',
-  'POST /api/videos/update': 'update',
-  'POST /api/videos/poster': 'posterUpload',
-  'POST /api/videos/delete': 'remove',
-};
-
 function createHandler(deps = {}) {
   const getConfig = deps.loadConfig || loadConfig;
   const fetchImpl = deps.fetchImpl || ((...args) => fetch(...args));
@@ -90,23 +82,28 @@ function createHandler(deps = {}) {
     const params = event.queryStringParameters || {};
     const siteUrl = process.env.SITE_URL;
     const route = ROUTES[`${method} ${path}`];
+    const context = event.requestContext;
+    const managedApi = Boolean(context && ((context.authorizer && context.authorizer.jwt) ||
+      (context.apiId && context.routeKey !== '$default')));
+    if (managedApi && !route) return json(404, { error: 'Not found' });
     if (!route && method !== 'GET') return json(405, { error: 'Method not allowed' });
 
     try {
-      const config = await getConfig();
+      const config = managedApi ? null : await getConfig();
 
-      if (path === '/auth/login') {
+      if (!managedApi && path === '/auth/login') {
         const login = auth.startLogin(config, siteUrl, clock(), params.return);
         return redirect(login.location, login.cookies);
       }
-      if (path === '/auth/callback') {
+      if (!managedApi && path === '/auth/callback') {
         const result = await auth.finishLogin(event, config, siteUrl, { fetchImpl, now: clock() });
         return result.location ? redirect(result.location, result.cookies) : errorPage(result.status, result.error, result.cookies);
       }
-      if (path === '/auth/logout') return redirect('/', auth.logoutCookies());
+      if (!managedApi && path === '/auth/logout') return redirect('/', auth.logoutCookies());
 
       if (!path.startsWith('/api/')) return json(404, { error: 'Not found' });
-      const session = auth.getSession(event, config, clock());
+      const session = managedApi ? apiAccess.authorize(event, route.scope) : auth.getSession(event, config, clock());
+      if (session && session.status) return json(session.status, { error: session.error });
       // Clearing the hint cookie makes the pages hide the owner controls again.
       if (!session) return json(401, { error: 'Not signed in' }, auth.logoutCookies());
 
@@ -119,11 +116,11 @@ function createHandler(deps = {}) {
         invalidate: deps.invalidate || invalidateWithCloudFront,
       });
 
-      if (route) {
+      if (route && route.action) {
         // Cross-site requests carry no session (SameSite=Lax); the Origin check is a second guard.
         const origin = (event.headers && event.headers.origin) || '';
-        if (origin !== siteUrl) return json(403, { error: 'Forbidden' });
-        return json(200, await videos[route](parseBody(event)));
+        if (!managedApi && origin !== siteUrl) return json(403, { error: 'Forbidden' });
+        return json(200, await videos[route.action](parseBody(event)));
       }
       if (path === '/api/me') return json(200, { user: session.user, name: session.name });
       if (path === '/api/videos') return json(200, await videos.list());

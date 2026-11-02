@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // End-to-end test against the deployed site: upload (multipart, straight to S3), publish, serve,
-// edit, embed and delete a throwaway video. It signs a short-lived owner session with
-// the session key derived from the Entra client secret in SSM, so it needs AWS credentials.
-// Usage: node scripts/smoke-test.js [--keep]
+// edit, embed and delete a throwaway video. --microsoft uses a token from auth.dliu.com (copied or saved).
+// The legacy mode signs a short-lived owner session using the website's Entra secret in SSM
+// and needs AWS credentials.
+// Usage: node scripts/smoke-test.js [--microsoft] [--keep]
 const crypto = require('crypto');
 const { execFileSync } = require('child_process');
 const auth = require('../lambda/api/auth');
@@ -11,12 +12,17 @@ const SITE = process.env.SITE_URL || 'https://video.dliu.com';
 const REGION = process.env.AWS_REGION || 'eu-west-1';
 const PREFIX = process.env.PARAMETER_PREFIX || '/video';
 const keep = process.argv.includes('--keep');
+const microsoft = process.argv.includes('--microsoft');
 
 const param = (name) => execFileSync('aws', ['ssm', 'get-parameter', '--region', REGION, '--name', `${PREFIX}/${name}`,
   '--with-decryption', '--query', 'Parameter.Value', '--output', 'text']).toString().trim();
-const config = { tenantId: param('entra-tenant-id'), clientId: param('entra-client-id'), clientSecret: param('entra-client-secret') };
-const session = auth.sign({ user: `smoke-test@${new URL(SITE).hostname}`, name: 'Smoke test', exp: Math.floor(Date.now() / 1000) + 600 }, auth.sessionKey(config));
-const cookie = `${auth.SESSION_COOKIE}=${session}`;
+const apiClient = microsoft ? require('./api-client').createClient(require('./api-client').readConfig()) : null;
+let cookie;
+if (!microsoft) {
+  const config = { tenantId: param('entra-tenant-id'), clientId: param('entra-client-id'), clientSecret: param('entra-client-secret') };
+  const session = auth.sign({ user: `smoke-test@${new URL(SITE).hostname}`, name: 'Smoke test', exp: Math.floor(Date.now() / 1000) + 600 }, auth.sessionKey(config));
+  cookie = `${auth.SESSION_COOKIE}=${session}`;
+}
 
 function check(condition, message) {
   if (!condition) throw new Error(`not ok - ${message}`);
@@ -24,6 +30,7 @@ function check(condition, message) {
 }
 
 async function api(path, body) {
+  if (apiClient) return apiClient.request('POST', path, body);
   const text = JSON.stringify(body);
   const response = await fetch(SITE + path, {
     method: 'POST',
@@ -36,7 +43,9 @@ async function api(path, body) {
 }
 
 async function main() {
-  check((await (await fetch(`${SITE}/api/me`, { headers: { cookie } })).json()).user, 'owner session accepted');
+  const identity = apiClient ? await apiClient.request('GET', '/api/me') :
+    await (await fetch(`${SITE}/api/me`, { headers: { cookie } })).json();
+  check(identity.user, microsoft ? 'Microsoft API access accepted' : 'owner session accepted');
 
   // S3 doesn't look inside the file, so random bytes are enough to exercise two upload parts.
   const file = crypto.randomBytes(20 * 1024 * 1024);

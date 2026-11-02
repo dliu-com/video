@@ -1,7 +1,8 @@
 // CloudFront Function (cloudfront-js-2.0), viewer-request on the page behaviors.
 // Clean URLs: /<id> and /watch?v=<id> -> /watch.html, /upload -> /upload.html, /docs -> /docs.html,
+// /docs/api -> /docs-api.html,
 // /embed/<id> -> /embed.html. A video ID is yyyymmdd plus a two-digit number, e.g. 2026102700.
-var PAGES = { '/watch': '/watch.html', '/upload': '/upload.html', '/docs': '/docs.html' };
+var PAGES = { '/watch': '/watch.html', '/upload': '/upload.html', '/docs': '/docs.html', '/docs/api': '/docs-api.html' };
 
 function handler(event) {
   var request = event.request;

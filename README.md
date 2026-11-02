@@ -2,7 +2,10 @@
 
 A small, serverless video site. The owner uploads videos after signing in with Microsoft 365. Anyone can watch them. Any video can be embedded in other sites, such as blog.dliu.com.
 
-The live docs at [video.dliu.com/docs](https://video.dliu.com/docs) cover the technical architecture, running costs and security (including a live penetration test).
+The docs at [video.dliu.com/docs](https://video.dliu.com/docs) cover the technical architecture, running costs and security (including a live penetration test).
+The dedicated [API reference](https://video.dliu.com/docs/api) documents the nine Microsoft-token routes,
+request/response fields and the direct-to-S3 multipart workflow. Agents can read the same source at
+[/docs/api.md](https://video.dliu.com/docs/api.md); its browser page renders that single Markdown source.
 
 ## How it works
 
@@ -33,6 +36,7 @@ Nothing runs while nobody is using the site, and there is no fixed monthly fee. 
 | S3 | Storage (Intelligent-Tiering for videos) and requests |
 | CloudFront | Data transfer and requests. The free tier includes 1 TB and 10M requests per month. |
 | Lambda | Invocations. Only page loads by the owner and API calls use it. |
+| API Gateway HTTP API (optional) | Requests to the Microsoft-token API; no fixed monthly charge |
 | SSM Parameter Store | Standard parameters, which are free |
 | Route 53, ACM | Covered by the existing hosted zone; public certificates are free |
 
@@ -45,7 +49,7 @@ When idle, the only cost is video storage. See [/docs#cost](https://video.dliu.c
 | `lib/video-stack.ts` | The CDK stack |
 | `lambda/api/` | API and sign-in Lambda (`index.js` routes, `videos.js` upload/edit/delete, `store.js` S3 data, `auth.js` Entra, `presign.js` SigV4) |
 | `functions/pages.js` | CloudFront Function for clean URLs (`/<id>`, `/embed/<id>`, `/upload`, `/docs`) |
-| `web/` | Static pages: home, watch, upload, embed, and docs (`docs.js` content, `diagram.js` diagram kit from traffic-monitor) |
+| `web/` | Static pages: home, watch, upload, embed, and docs (`docs.js` content, `docs-api.html` and `docs-api.js` render `docs/api.md`, `diagram.js` diagram kit from traffic-monitor) |
 | `config/site.json` | Subdomain, sites allowed to embed, upload size cap |
 | `scripts/set-secrets.sh` | Stores the Entra app credentials in SSM |
 
@@ -73,6 +77,103 @@ Requirements: the root `dliu.com` stack (exports `MainDomain`, `MainHostedZoneId
 Then open https://video.dliu.com, choose **Sign in**, and upload.
 
 Until the first video is uploaded, `/data/catalog.json` doesn't exist (CloudFront returns 403) and the home page shows an empty list.
+
+## Microsoft-issued API access
+
+The optional API uses Microsoft-issued access tokens for the shared **dliu API** Entra resource, not the
+Video website's app registration. **Authentication is required:** configure your requester using the
+[Auth API documentation](https://auth.dliu.com/docs/api), the canonical guide for credential lookup,
+token acquisition, storage, expiry/renewal and authenticated request setup.
+Website sign-in, session cookies, public playback and embeddings stay unchanged. No API tokens are created by Video.
+
+An API Gateway HTTP API validates Microsoft's access-token signature, tenant-specific v2 issuer, audience,
+expiry and the route's delegated scope. The Lambda accepts this identity only from the configured gateway,
+requires the approved client application's `azp` and the Microsoft-issued shared `api.access` user role, and
+never falls back to a browser cookie on this entry point. The website API still requires its session and
+same-origin checks. Arbitrary headers cannot supply gateway identity.
+
+### Entra configuration
+
+1. On the shared **dliu API** registration, request v2 access tokens (`api.requestedAccessTokenVersion: 2`).
+   Define admin-consent-only delegated scopes `video.read`, `video.write` and `video.delete`.
+2. Use the shared user-only app role **dliu API user** (value `api.access`), common to the Video, Files, Blog
+   and Trip planner APIs. It grants no operation by itself: every route still needs its exact `video.*` scope.
+   On **Enterprise applications > dliu API**, enable **Assignment required** and assign only approved
+   `dliu.com` users to this role. Do not assign guests. The former `video.access` role is not accepted.
+   Manage access there, not in a local email/user allowlist. On Entra Free, assign users individually.
+3. Use the shared resource/client configuration from the [Auth API documentation](https://auth.dliu.com/docs/api).
+   Store these three non-secret **String** parameters in eu-west-1:
+
+   | Parameter | Value |
+   | --- | --- |
+   | `/video/api-tenant-id` | The Entra directory ID |
+   | `/video/api-audience` | The shared dliu API application/client ID (a GUID, without `api://`) |
+   | `/video/api-client-id` | The same shared dliu API application/client ID (the only approved SPA `azp`) |
+
+4. Set `microsoftApi` to `true` in `config/site.json`, deploy the whole Video stack, and obtain
+   `MicrosoftApiUrl` from `make outputs`. Keep the flag enabled on subsequent deployments.
+   The CDK entry point is opt-in; this checkout now enables the managed API after approval.
+
+The shared Auth configuration, SSM values and live deployment must be completed before use.
+An unconfigured checkout must keep `microsoftApi: false` until those prerequisites and deployment are explicitly approved.
+Authenticated standard-user gateway success remains unverified.
+
+Use the **MicrosoftApiUrl** endpoint for bearer requests, not `https://video.dliu.com/api/*`:
+CloudFront's existing origin access control signs the website's requests with AWS IAM credentials.
+The new gateway invokes the same Lambda directly with AWS-scoped invoke permission. It has no
+unauthenticated default route, sign-in callback or logout route. There is no public managed API
+hostname until deployment; initially use the AWS-generated endpoint from that output.
+
+| API routes | Required delegated scope |
+| --- | --- |
+| `GET /api/me`, `GET /api/videos` | `video.read` |
+| `POST /api/uploads`, `/api/uploads/parts`, `/api/uploads/complete`, `/api/uploads/abort` | `video.write` |
+| `POST /api/videos/update`, `POST /api/videos/poster` | `video.write` |
+| `POST /api/videos/delete` | `video.delete` |
+
+### Video request examples
+
+These examples assume credentials and an authenticated requester configured per the
+[Auth API documentation](https://auth.dliu.com/docs/api). With Node.js 22+ and `npm ci`, run from this checkout:
+
+```bash
+export VIDEO_API_URL='https://<api-id>.execute-api.eu-west-1.amazonaws.com' # MicrosoftApiUrl
+node scripts/api-client.js GET /api/me
+node scripts/api-client.js GET /api/videos
+```
+
+For changes, Video requires `video.write` or `video.delete` as appropriate; use a route above,
+for example `node scripts/api-client.js POST /api/videos/update '{"id":"<video-id>","title":"Updated title"}'`.
+
+A `401` requires checking the endpoint and requester setup using the Auth API documentation.
+A `403` requires checking the approved SPA client, assigned-user `api.access` role and route scope;
+`video.write` alone does not grant `video.delete`. There is no fallback to website cookies.
+The API enforces the scopes Microsoft actually issued. Video provides no token-management or refresh endpoint.
+This configuration is for users, not unattended application credentials; app-only access needs a
+separate explicit authorization design.
+
+Managed Video code does not cache raw Microsoft bearer tokens in application-global state, persist
+them in S3/SSM or log bearer headers/full request events across Lambda invocations. Reused AWS clients,
+website configuration and public signing keys are separate caches, not API-token caches.
+Request-local values and warm-runtime memory may remain until garbage collection; no forensic
+zeroization is promised. Website sign-in, playback and embeds are unchanged.
+
+The API accepts only the single client configured in `/video/api-client-id`. Tokens come only from
+Central Microsoft sign-in at auth.dliu.com; `scripts/api-client.js` has no sign-in of its own.
+
+### Optional live smoke test
+
+Only with explicit approval for a live upload/edit/delete test, after requester setup per the
+[Auth API documentation](https://auth.dliu.com/docs/api) and Video deployment are complete,
+set `VIDEO_API_URL` to `MicrosoftApiUrl` and use all three Video scopes, then run:
+
+```sh
+node scripts/smoke-test.js --microsoft
+```
+
+This creates and deletes its own throwaway video and consumes one video ID. It does not read the
+website client secret. S3 uploads still use temporary AWS-presigned URLs; video bytes never pass
+through API Gateway. This is not a read-only authentication check.
 
 ## Video IDs
 

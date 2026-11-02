@@ -49,7 +49,7 @@ function architecture(root) {
     ['0 servers', 'nothing runs while nobody is watching', 'power'],
     ['1 Lambda', 'only for sign-in and owner changes', 'lambda'],
     ['2 S3 buckets', 'site files, and videos with their data', 's3'],
-    ['1 CloudFront', 'serves every page, video and API call', 'cloudfront'],
+    ['1 CloudFront', 'serves pages, videos and the website API', 'cloudfront'],
   ]));
 
   root.append(tiers({
@@ -160,6 +160,28 @@ function architecture(root) {
     ],
   }));
 
+  add('h2', 'Microsoft-issued API access (optional)');
+  add('p', 'A separate API Gateway HTTP API can accept Microsoft access tokens for the shared dliu API resource. It reuses the Video Lambda without changing website sign-in, public playback or embeddings. Use the gateway endpoint from the deployment outputs, not the website API URL.');
+  const authDocsLink = document.createElement('a');
+  authDocsLink.href = 'https://auth.dliu.com/docs/api';
+  authDocsLink.textContent = 'Authentication is required: configure your requester using the Auth API documentation';
+  const authParagraph = add('p', '');
+  authParagraph.append(authDocsLink);
+  add('p', 'Token acquisition, credential storage/lookup, expiry/renewal and authenticated request setup are documented centrally in the Auth API documentation. Video documents its own routes, permissions, payloads and upload workflow at /docs/api.');
+  add('p', 'The shared application/client ID is both the resource audience (aud) and the approved SPA client (azp); both claims are still checked independently. Authenticated standard-user gateway success remains unverified.');
+  root.append(table(['Permission', 'Operations'], [
+    [mono('video.read'), 'Read API identity and list videos'],
+    [mono('video.write'), 'Start, complete or abort uploads; edit videos and posters'],
+    [mono('video.delete'), 'Delete videos'],
+  ]));
+  add('p', 'API Gateway validates Microsoft signatures, the tenant-specific v2 issuer, audience, expiry and route scopes. The Lambda additionally requires the approved client and the shared dliu API user role (value api.access) issued by Microsoft. Only explicitly assigned users have that role; administrators manage assignments on the dliu API Enterprise application. Assign only approved dliu.com accounts, not guests. There is no API user allowlist or site-issued API token.');
+  add('p', 'Use MicrosoftApiUrl from the Video deployment outputs as VIDEO_API_URL for your configured requester. This is the AWS-generated API Gateway endpoint; no public managed API hostname is configured. Do not use https://video.dliu.com/api/* for managed requests: that entry point requires the separate website session.');
+  add('p', 'GET /api/me and GET /api/videos need video.read. Upload and edit POST routes need video.write; POST /api/videos/delete needs video.delete. A write permission does not include delete. The API enforces the scopes Microsoft actually issued and the assigned-user api.access role. The shared role grants no operation by itself; each route still needs its exact Video scope.');
+  add('p', 'Managed Video code has no application-global bearer-token cache, API-token persistence or raw bearer-header/full-event logging across Lambda invocations. Reused AWS clients, website configuration and public signing-key caches are not API-token caches. Request-local values and warm-runtime memory may remain until garbage collection; this is not a forensic zeroization guarantee.');
+  root.append(code('node scripts/api-client.js GET /api/videos'));
+  add('p', 'A 401 requires checking the endpoint and requester setup using the Auth API documentation. A 403 requires checking the approved SPA client, the assigned-user api.access role and the required route scope. Managed requests never fall back to website cookies. Tokens come only from Central Microsoft sign-in at auth.dliu.com: only the single configured client azp is approved.');
+  add('p', 'The managed API is enabled in Video configuration. Use MicrosoftApiUrl from an explicitly approved deployment with the shared application/client ID configured as both audience and approved client. The website session cookies, Microsoft login, public playback and embeds remain unchanged.');
+
   root.append(more('Build, deploy and test',
     list([
       'One AWS CDK stack (TypeScript), Video, in eu-west-1; the certificate is in us-east-1 as CloudFront requires. make deploy builds and deploys it.',
@@ -192,6 +214,7 @@ function cost(root) {
     ['CloudFront', 'Free each month: 1 TB out, 10 million requests, 2 million function runs. Then $0.085 per GB (Europe and North America) and about $0.01 per 10,000 requests', num('$0')],
     ['CloudFront Functions', 'Pages and visitor ID functions: $0.10 per million runs after the free 2 million', num('$0')],
     ['API Lambda', '$0.20 per million calls and $0.0000133 per GB-second (ARM). Free each month: 1 million calls and 400,000 GB-seconds. Viewers never call it', num('$0')],
+    ['API Gateway HTTP API (optional)', 'Additional per-request charges for Microsoft-token API calls; no fixed monthly fee. Public video playback does not use it', num('$0')],
     ['CDN invalidations', 'Three paths per delete; the first 1,000 paths a month are free, then $0.005 per path', num('$0')],
     ['Parameter Store', 'Standard parameters; read at most every 5 minutes while the Lambda is warm', num('$0')],
     ['KMS', 'The AWS-managed aws/ssm key decrypts the client secret; 20,000 free requests a month', num('$0')],
@@ -258,7 +281,7 @@ function security(root) {
       {
         label: 'API Lambda', badge: 'API', tone: 'app', link: 'signed by CloudFront (IAM, OAC)',
         nodes: [
-          { icon: 'lock', title: 'Session check', text: 'Every /api call needs a valid signed session; changes also need Origin https://video.dliu.com' },
+          { icon: 'lock', title: 'Session check', text: 'Website /api calls need a signed session; changes also need Origin https://video.dliu.com. The optional gateway uses Microsoft tokens, scopes and assigned-user roles instead' },
           { icon: 'filter', title: 'Input checks', text: 'IDs, titles, sizes, file types and part numbers validated before anything is written' },
         ],
       },
@@ -275,6 +298,7 @@ function security(root) {
   }));
 
   add('h2', 'Limits');
+  add('p', 'The historical live checks below cover the website entry point. The optional Microsoft-token API additionally rejects missing/invalid tokens at API Gateway and requires delegated scopes, the approved client and the assigned-user api.access role. Browser cookies cannot bypass these checks.');
   root.append(stats([
     ['12 hours', 'session lifetime', 'lock'],
     ['1 hour', 'lifetime of each upload URL', 'key'],
@@ -358,7 +382,7 @@ function show(scroll) {
     else link.removeAttribute('aria-current');
   }
   const titles = { architecture: 'Technical architecture', cost: 'Cost', security: 'Security' };
-  document.title = `${titles[current]} · Docs · Videos · dliu.com`;
+  document.title = `${titles[current]} · Docs · Video · dliu.com`;
   if (scroll) window.scrollTo(0, 0);
 }
 window.addEventListener('hashchange', () => show(true));

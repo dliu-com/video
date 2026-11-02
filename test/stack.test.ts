@@ -54,7 +54,7 @@ test('only the embed player can be framed, and only by the configured sites', ()
   expect(headers('EmbedHeaders').FrameOptions).toBeUndefined();
 });
 
-test('the API Lambda is invoked only through CloudFront and can invalidate it', () => {
+test('the browser API Lambda is invoked through CloudFront and can invalidate it', () => {
   template.hasResourceProperties('AWS::Lambda::Url', { AuthType: 'AWS_IAM' });
   template.hasResourceProperties('AWS::Lambda::Function', Match.objectLike({
     Runtime: 'nodejs22.x',
@@ -65,4 +65,32 @@ test('the API Lambda is invoked only through CloudFront and can invalidate it', 
   template.hasResourceProperties('AWS::IAM::Policy', {
     PolicyDocument: { Statement: [Match.objectLike({ Action: 'cloudfront:CreateInvalidation' })] },
   });
+});
+
+test('Microsoft API is opt-in and every exposed route has its exact delegated scope', () => {
+    template.resourceCountIs('AWS::ApiGatewayV2::Api', 0);
+    const enabled = Template.fromStack(new VideoStack(new App(), 'VideoMicrosoft', {
+      subdomain: 'video', embedAncestors: ['https://dliu.com'], maxUploadBytes: 50 * 1024 ** 3,
+      microsoftApi: true, env: { account: '123456789012', region: 'eu-west-1' },
+    }));
+    enabled.resourceCountIs('AWS::ApiGatewayV2::Api', 1);
+    enabled.hasResourceProperties('AWS::ApiGatewayV2::Authorizer', {
+      AuthorizerType: 'JWT', IdentitySource: ['$request.header.Authorization'],
+      JwtConfiguration: { Audience: [Match.anyValue()], Issuer: Match.anyValue() },
+    });
+    const routes = require('../lambda/api/routes.json');
+    const deployed = Object.values(enabled.findResources('AWS::ApiGatewayV2::Route'));
+    expect(deployed).toHaveLength(Object.keys(routes).length);
+    for (const route of deployed) {
+      expect(route.Properties.AuthorizationType).toBe('JWT');
+      expect(route.Properties.AuthorizationScopes).toEqual([routes[route.Properties.RouteKey].scope]);
+      expect(route.Properties.AuthorizerId).toBeDefined();
+    }
+    expect(deployed.some((route) => route.Properties.RouteKey.includes('/auth/'))).toBe(false);
+    enabled.hasResourceProperties('AWS::Lambda::Url', { AuthType: 'AWS_IAM' });
+    enabled.hasResourceProperties('AWS::Lambda::Permission', {
+      Principal: 'apigateway.amazonaws.com', Action: 'lambda:InvokeFunction', SourceArn: Match.anyValue(),
+    });
+    enabled.hasResourceProperties('AWS::ApiGatewayV2::Integration', { PayloadFormatVersion: '2.0' });
+    enabled.hasOutput('MicrosoftApiUrl', { Value: Match.anyValue() });
 });

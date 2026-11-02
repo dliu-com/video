@@ -1,0 +1,11 @@
+{
+  "GET /api/me": { "scope": "video.read" },
+  "GET /api/videos": { "scope": "video.read" },
+  "POST /api/uploads": { "scope": "video.write", "action": "createUpload" },
+  "POST /api/uploads/parts": { "scope": "video.write", "action": "signParts" },
+  "POST /api/uploads/complete": { "scope": "video.write", "action": "completeUpload" },
+  "POST /api/uploads/abort": { "scope": "video.write", "action": "abortUpload" },
+  "POST /api/videos/update": { "scope": "video.write", "action": "update" },
+  "POST /api/videos/poster": { "scope": "video.write", "action": "posterUpload" },
+  "POST /api/videos/delete": { "scope": "video.delete", "action": "remove" }
+}

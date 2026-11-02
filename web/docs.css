@@ -78,12 +78,13 @@ main.docs-main { max-width: 1040px; }
 .dg-more[open] > summary { border-bottom: 1px solid var(--dg-soft); }
 .dg-more > div { padding: 0 18px 12px; }
 
-/* Tabs between the three sections. */
+/* Tabs between docs sections. */
 .info-tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; max-width: 980px; margin: 4px 0 18px; border-bottom: 1px solid var(--line); }
 .info-tabs::-webkit-scrollbar { display: none; }
 .info-tabs a { flex: none; padding: 9px 14px; color: var(--muted); font-weight: 600; font-size: 15px; text-decoration: none; border-bottom: 3px solid transparent; margin-bottom: -1px; }
 .info-tabs a:hover { color: var(--accent); text-decoration: none; }
 .info-tabs a[aria-current="page"] { color: var(--text); border-bottom-color: var(--accent); }
+.api-doc h1[id], .api-doc h2[id], .api-doc h3[id] { scroll-margin-top: 84px; }
 
 @media (max-width: 640px) {
   .docs { font-size: 14.5px; }

@@ -1,6 +1,9 @@
 import * as path from 'path';
 import { Construct } from 'constructs';
 import {
+  aws_apigatewayv2 as apigateway,
+  aws_apigatewayv2_authorizers as authorizers,
+  aws_apigatewayv2_integrations as integrations,
   aws_certificatemanager as acm,
   aws_cloudfront as cloudfront,
   aws_cloudfront_origins as origins,
@@ -19,6 +22,7 @@ import {
   Stack,
   StackProps,
 } from 'aws-cdk-lib';
+import apiRoutes from '../lambda/api/routes.json';
 
 const ROOT = path.join(__dirname, '..');
 export const PARAMETER_PREFIX = '/video';
@@ -30,6 +34,7 @@ export interface VideoStackProps extends StackProps {
   embedAncestors: string[];
   /** Largest video the upload page accepts. */
   maxUploadBytes: number;
+  microsoftApi?: boolean;
 }
 
 // Everything here is pay-per-use: S3, CloudFront, one Lambda behind a function URL, CloudFront Functions and
@@ -108,6 +113,34 @@ export class VideoStack extends Stack {
     }));
     const functionUrl = api.addFunctionUrl({ authType: lambda.FunctionUrlAuthType.AWS_IAM });
 
+    if (props.microsoftApi) {
+      const parameter = (name: string) => ssm.StringParameter.valueForStringParameter(this, `${PARAMETER_PREFIX}/api-${name}`);
+      const tenantId = parameter('tenant-id');
+      const audience = parameter('audience');
+      const clientId = parameter('client-id');
+      const httpApi = new apigateway.HttpApi(this, 'MicrosoftApi', {
+        description: 'Video API: Microsoft Entra access tokens, delegated permissions and assigned users',
+      });
+      const authorizer = new authorizers.HttpJwtAuthorizer('MicrosoftJwt',
+        Fn.join('', ['https://login.microsoftonline.com/', tenantId, '/v2.0']), { jwtAudience: [audience] });
+      const integration = new integrations.HttpLambdaIntegration('VideoApi', api);
+      for (const [route, permission] of Object.entries(apiRoutes)) {
+        const [method, routePath] = route.split(' ');
+        httpApi.addRoutes({
+          path: routePath,
+          methods: [apigateway.HttpMethod[method as 'GET' | 'POST']],
+          integration,
+          authorizer,
+          authorizationScopes: [permission.scope],
+        });
+      }
+      api.addEnvironment('API_GATEWAY_ID', httpApi.apiId);
+      api.addEnvironment('API_TENANT_ID', tenantId);
+      api.addEnvironment('API_AUDIENCE', audience);
+      api.addEnvironment('API_CLIENT_ID', clientId);
+      new CfnOutput(this, 'MicrosoftApiUrl', { value: httpApi.apiEndpoint });
+    }
+
     // ---------- CDN ----------
     // CloudFront requires its certificate in us-east-1 (same pattern as the other sites).
     const certificate = new acm.DnsValidatedCertificate(this, 'SiteCertificate', {
@@ -165,7 +198,7 @@ export class VideoStack extends Stack {
       this, 'TrafficGeo', Fn.importValue('TrafficGeoOriginRequestPolicyId'));
 
     const pagesFunction = new cloudfront.Function(this, 'PagesFunction', {
-      comment: 'Serves /watch, /upload, /docs and /embed/<id> from their .html files',
+      comment: 'Serves /watch, /upload, /docs, /docs/api and /embed/<id> from their .html files',
       runtime: cloudfront.FunctionRuntime.JS_2_0,
       code: cloudfront.FunctionCode.fromFile({ filePath: path.join(ROOT, 'functions/pages.js') }),
     });
