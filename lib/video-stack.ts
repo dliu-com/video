@@ -263,7 +263,9 @@ export class VideoStack extends Stack {
       certificate,
       defaultRootObject: 'index.html',
       minimumProtocolVersion: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
-      priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
+      // All edge locations: most viewers are in Europe and Asia. Within the always-free 1 TB this costs nothing.
+      priceClass: cloudfront.PriceClass.PRICE_CLASS_ALL,
+      httpVersion: cloudfront.HttpVersion.HTTP2_AND_3,
     });
     // IncludeCookies is the only legacy logging setting v2 honours: it puts the dl_vid cookie in the logs.
     (distribution.node.defaultChild as cloudfront.CfnDistribution)

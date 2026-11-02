@@ -102,3 +102,10 @@ test('Microsoft API is opt-in and every exposed route has its exact delegated sc
     enabled.hasResourceProperties('AWS::ApiGatewayV2::Integration', { PayloadFormatVersion: '2.0' });
     enabled.hasOutput('MicrosoftApiUrl', { Value: Match.anyValue() });
 });
+
+test('serves from every edge location over HTTP/2 and HTTP/3; HTML and catalog stay revalidated', () => {
+  expect(distributionConfig().PriceClass).toBe('PriceClass_All');
+  expect(distributionConfig().HttpVersion).toBe('http2and3');
+  const deployments = Object.values(template.findResources('Custom::CDKBucketDeployment'));
+  expect(deployments.map((d: any) => d.Properties.SystemMetadata)).toEqual([{ 'cache-control': 'no-cache' }]);
+});
