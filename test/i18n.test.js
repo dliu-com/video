@@ -101,7 +101,7 @@ test('every page loads the language module, and the docs say the API reference i
     expect(read(`web/${script}.js`)).toMatch(/from '\.\/common\.js'/);
   }
   for (const html of ['index', 'watch', 'upload', 'docs', 'docs-api']) {
-    expect(read(`web/${html}.html`)).toContain('<span data-zh="视频">Video</span>');
+    expect(read(`web/${html}.html`)).toContain('<span data-zh="DL 视频">DL video</span>');
   }
 });
 

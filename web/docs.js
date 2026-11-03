@@ -394,7 +394,7 @@ function show(scroll) {
     else link.removeAttribute('aria-current');
   }
   const titles = { architecture: t('技术架构', 'Technical architecture'), cost: t('运行成本', 'Cost'), security: t('安全', 'Security') };
-  document.title = `${titles[current]} · ${t('文档 · 视频', 'Docs · Video')} · dliu.com`;
+  document.title = `${titles[current]} · ${t('文档 · DL 视频', 'Docs · DL video')} · dliu.com`;
   if (scroll) window.scrollTo(0, 0);
 }
 window.addEventListener('hashchange', () => show(true));
