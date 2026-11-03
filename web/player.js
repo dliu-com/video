@@ -1,5 +1,5 @@
 // The video player for the watch and embed pages: Plyr controls, with hls.js for the streaming versions.
-// The ⚙ menu has Quality (Auto shows the level it is playing), Speed, Picture in picture and Download.
+// The ⚙ menu has Quality (Auto shows the level it is playing), Speed and Download.
 // Both libraries are self-hosted (web/vendor/, see scripts/vendor.js) and loaded only when a video is shown.
 // If they cannot load, the browser's own controls play the original file.
 
@@ -186,13 +186,6 @@ export async function createPlayer(media, video, { start = 0, autoplay = false, 
     const list = plyr.elements.settings?.panels?.home?.querySelector('[role="menu"]');
     if (!list) return;
     const close = () => plyr.elements.buttons.settings?.click();
-    const pip = document.pictureInPictureEnabled
-      || (typeof media.webkitSupportsPresentationMode === 'function' && media.webkitSupportsPresentationMode('picture-in-picture'));
-    if (pip) {
-      const item = menuItem('button', 'Picture in picture', { type: 'button' });
-      item.addEventListener('click', () => { close(); plyr.pip = !plyr.pip; });
-      list.append(item);
-    }
     const download = menuItem('a', 'Download', { href: video.src, download: fileName(video) });
     download.addEventListener('click', close);
     list.append(download);
