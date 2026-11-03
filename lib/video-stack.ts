@@ -111,7 +111,7 @@ export class VideoStack extends Stack {
         MAX_UPLOAD_BYTES: String(props.maxUploadBytes),
       },
       logGroup: new logs.LogGroup(this, 'ApiLogs', {
-        retention: logs.RetentionDays.ONE_MONTH,
+        retention: logs.RetentionDays.THREE_MONTHS,
         removalPolicy: RemovalPolicy.DESTROY,
       }),
     });

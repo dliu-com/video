@@ -168,3 +168,10 @@ test('streaming versions: MediaConvert after a delay, finished jobs reported bac
     { Header: 'Cache-Control', Value: 'public, max-age=31536000, immutable', Override: false },
   ]);
 });
+
+test('every log group the stack manages is kept for 3 months', () => {
+  const groups = Object.values(template.findResources('AWS::Logs::LogGroup'));
+  expect(groups.length).toBeGreaterThan(0);
+  for (const group of groups) expect(group.Properties.RetentionInDays).toBe(90);
+  template.resourceCountIs('Custom::LogRetention', 0);
+});

@@ -46,6 +46,7 @@ Nothing runs while nobody is using the site, and there is no fixed monthly fee. 
 | MediaConvert | About $0.05 per minute of video for the four streaming qualities (Basic tier, single pass), only when a file is converted |
 | EventBridge Scheduler and rules | One schedule per upload; 14 million free invocations a month. MediaConvert events are free. |
 | API Gateway HTTP API (optional) | Requests to the Microsoft-token API; no fixed monthly charge |
+| CloudWatch Logs | A few KB a month. Every log group is kept for 3 months (90 days), including the owner-action audit log. |
 | SSM Parameter Store | Standard parameters, which are free |
 | Route 53, ACM | Covered by the existing hosted zone; public certificates are free |
 

@@ -172,7 +172,7 @@ function createHandler(deps = {}) {
         const origin = (event.headers && event.headers.origin) || '';
         if (!managedApi && origin !== siteUrl) return json(403, { error: 'Forbidden' });
         const input = parseBody(event);
-        // Audit trail for owner writes (private log group, 30 days); uploads go straight to S3 and are otherwise unlogged.
+        // Audit trail for owner writes (private log group, 90 days); uploads go straight to S3 and are otherwise unlogged.
         console.info(JSON.stringify({ message: 'Owner action', action: route.action, id: typeof input.id === 'string' ? input.id.slice(0, 20) : undefined,
           by: session.oid || session.user, via: managedApi ? 'api' : 'site' }));
         return json(200, await videos[route.action](input));
