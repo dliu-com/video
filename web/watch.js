@@ -1,6 +1,6 @@
 import { api, captureFrame, copyText, formatDate, formatSize, getData, isOwner, putBlob, renderNav, t } from './common.js';
 import { lang } from './i18n.js';
-import { createPlayer } from './player.js';
+import { createPlayer, fileName } from './player.js';
 
 const $ = (id) => document.getElementById(id);
 // Videos live at /<id>; old-style /watch?v=<id> links are rewritten to that.
@@ -22,6 +22,8 @@ function showVideo(data) {
   $('meta').textContent = [formatDate(data.createdAt), isOwner() ? formatSize(data.size) : '']
     .filter(Boolean).join(' · ');
   $('description').textContent = data.description || '';
+  $('download').href = data.src;
+  $('download').download = fileName(data);
   if (data.width && data.height) $('player').parentElement.style.setProperty('--ratio', String(data.width / data.height));
   updateEmbed();
 }

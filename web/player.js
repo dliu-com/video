@@ -82,7 +82,8 @@ function menuItem(tag, label, attrs = {}) {
   return item;
 }
 
-function fileName(video) {
+/** The name a downloaded file gets: the title plus the original extension. */
+export function fileName(video) {
   const ext = (video.src.match(/\.([a-z0-9]+)$/i) || [, 'mp4'])[1];
   const name = (video.title || video.id).replace(/[\\/:*?"<>|\u0000-\u001f]+/g, ' ').trim().slice(0, 120) || video.id;
   return `${name}.${ext}`;
