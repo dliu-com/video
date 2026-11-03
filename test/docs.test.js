@@ -30,7 +30,7 @@ function renderDocs() {
   };
   const script = fs.readFileSync(path.join(__dirname, '../web/docs.js'), 'utf8').replace(/^import .*;$/gm, '');
   vm.runInNewContext(script, {
-    document, location: { hash: '#architecture' }, window: { addEventListener() {} }, renderNav() {},
+    document, location: { hash: '#architecture' }, window: { addEventListener() {} }, renderNav() {}, t: (zh, en) => en,
     flow: diagram, tiers: diagram, stats: diagram, table: diagram, callout: diagram, more: diagram,
   });
   return articles;

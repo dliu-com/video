@@ -104,3 +104,14 @@ test('every page loads the language module, and the docs say the API reference i
     expect(read(`web/${html}.html`)).toContain('<span data-zh="视频">Video</span>');
   }
 });
+
+test('every English sentence in the docs page has a Chinese translation beside it', () => {
+  const unwrapped = read('web/docs.js')
+    .replace(/t\('[^']*', ('[^']*'|"[^"]*")\)/g, 'T')
+    .replace(/(mono|code)\((['"`])[\s\S]*?\2\)/g, 'T');
+  const strings = [...unwrapped.matchAll(/'([^'\n]*)'|"([^"\n]*)"/g)].map((m) => m[1] ?? m[2]);
+  // Header values (CSP and friends) are not prose.
+  const left = strings.filter((text) => (/[A-Za-z]{3,} [A-Za-z]{2,}/.test(text) || /\/ month/.test(text)) && !/-src |max-age|=\(\)/.test(text));
+  expect(left).toEqual([]);
+  expect(read('web/docs.js')).toMatch(/^import \{[^}]*\bt\b[^}]*\} from '\.\/common\.js';$/m);
+});

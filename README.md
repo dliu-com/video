@@ -29,6 +29,7 @@ flowchart LR
 - **Player.** [Plyr](https://github.com/sampotts/plyr) controls with [hls.js](https://github.com/video-dev/hls.js). Both are self-hosted in `web/vendor/` and loaded only when a video is shown. The ⚙ menu has Quality (Auto shows the level it is playing, for example "Auto (720p)"), Speed and Download (the original file). hls.js keeps 30 to 60 seconds downloaded ahead, the same in every browser. Auto never picks more pixels than the player shows. Safari on iPhone uses its own HLS player, which picks the quality itself.
 - **Uploads go straight from the browser to S3** using presigned multipart URLs. Parts are at least 16 MiB, four upload in parallel, and failed parts are retried. The browser also reads the duration and size and grabs a thumbnail frame.
 - **There is no database.** `meta/index.json` in the video bucket is the source of truth and is updated with conditional writes. The Lambda publishes `data/catalog.json` (the list of videos) and `data/videos/<id>.json` (one per video). Pages read these through CloudFront.
+- **Chinese / English.** The `文/A` switch at the end of the header (the shared `dl-language` markup) changes every page, the player menu and the docs. The choice is saved in the browser (`video-language` in localStorage); otherwise any `zh-*` browser language shows Chinese. `web/i18n.js` translates static text from `data-zh` attributes and scripts use `t('中文', 'English')`. Video titles and descriptions are shown as written. `/docs/api` and `docs/api.md` (for agents) stay English.
 - Every video is listed on the home page and can be watched or embedded by anyone with its link.
 - **Sign-in** uses Entra OIDC with PKCE, the same as traffic-monitor. Only accounts in the root domain (`@dliu.com`) can manage videos.
 - Page views are logged by the shared traffic-monitor visitor function and geo origin request policy.
@@ -57,7 +58,7 @@ When idle, the only cost is video storage. See [/docs#cost](https://video.dliu.c
 | `lib/video-stack.ts` | The CDK stack |
 | `lambda/api/` | API and sign-in Lambda (`index.js` routes, `videos.js` upload/edit/delete, `streaming.js` MediaConvert conversion, `store.js` S3 data, `auth.js` Entra, `presign.js` SigV4) |
 | `functions/pages.js` | CloudFront Function for clean URLs (`/<id>`, `/embed/<id>`, `/upload`, `/docs`) |
-| `web/` | Static pages: home, watch, upload, embed, and docs (`docs.js` content, `docs-api.html` and `docs-api.js` render `docs/api.md`, `diagram.js` diagram kit from traffic-monitor). `player.js` is the shared player |
+| `web/` | Static pages: home, watch, upload, embed, and docs (`i18n.js` Chinese / English) (`docs.js` content, `docs-api.html` and `docs-api.js` render `docs/api.md`, `diagram.js` diagram kit from traffic-monitor). `player.js` is the shared player |
 | `web/vendor/` | Plyr and hls.js with their version in the file names, copied from `node_modules` by `make vendor` (`scripts/vendor.js`) and committed |
 | `config/site.json` | Subdomain, sites allowed to embed, upload size cap |
 | `scripts/set-secrets.sh` | Stores the Entra app credentials in SSM |
