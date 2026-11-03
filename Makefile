@@ -1,7 +1,7 @@
 AWS_REGION ?= eu-west-1
 STACK_NAME ?= Video
 
-.PHONY: install vendor test synth diff deploy set-secrets outputs smoke
+.PHONY: install vendor test synth diff deploy set-secrets outputs smoke pentest
 
 install:
 	npm ci
@@ -33,3 +33,8 @@ outputs:
 # End-to-end test against the deployed site. Uploads, checks and deletes a throwaway video.
 smoke:
 	AWS_REGION=$(AWS_REGION) node scripts/smoke-test.js
+
+# Live security tests (curl and openssl) against the deployed site. With AWS credentials it also checks direct
+# origin access, the concurrency cap and presigned poster URLs. Exits non-zero if any check fails.
+pentest:
+	AWS_REGION=$(AWS_REGION) bash scripts/pentest.sh

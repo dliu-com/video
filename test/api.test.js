@@ -5,6 +5,7 @@ const { createFakeS3 } = require('./fake-s3');
 
 const SITE = 'https://video.dliu.com';
 const NOW = Date.UTC(2026, 9, 27, 12, 0, 0);
+const JPEG = { contentType: 'image/jpeg' };
 const config = { tenantId: 't', clientId: 'c', clientSecret: 'secret', allowedDomain: 'example.com' };
 
 process.env.SITE_URL = SITE;
@@ -37,7 +38,7 @@ async function upload(call, s3, overrides = {}) {
   });
   expect(created.statusCode).toBe(200);
   const plan = created.json;
-  if (plan.posterUrl) s3.put(new URL(plan.posterUrl).pathname.slice(1), 'jpeg-bytes');
+  if (plan.posterUrl) s3.put(new URL(plan.posterUrl).pathname.slice(1), 'jpeg-bytes', JPEG);
   const parts = Array.from({ length: plan.partCount }, (_, i) => ({ partNumber: i + 1, etag: `"${'a'.repeat(32)}"` }));
   const done = await call('POST', '/api/uploads/complete', { body: { id: plan.id, uploadId: plan.uploadId, parts } });
   expect(done.statusCode).toBe(200);
@@ -147,7 +148,7 @@ describe('API', () => {
     const { call, s3 } = setup();
     const plan = (await call('POST', '/api/uploads', { body: { title: 'x', contentType: 'video/mp4', size: 10, poster: true } })).json;
     const posterKey = new URL(plan.posterUrl).pathname.slice(1);
-    s3.put(posterKey, 'jpeg');
+    s3.put(posterKey, 'jpeg', JPEG);
     expect((await call('POST', '/api/uploads/abort', { body: { id: plan.id, uploadId: plan.uploadId } })).statusCode).toBe(200);
     expect(s3.uploads.size).toBe(0);
     expect(s3.objects.has(`pending/${plan.id}.json`)).toBe(false);
@@ -172,10 +173,35 @@ describe('API', () => {
     const oldKey = video.poster.slice(1);
     const poster = (await call('POST', '/api/videos/poster', { body: { id: video.id } })).json;
     expect((await call('POST', '/api/videos/update', { body: { id: video.id, posterVersion: poster.version } })).statusCode).toBe(400);
-    s3.put(new URL(poster.url).pathname.slice(1), 'new-jpeg');
+    s3.put(new URL(poster.url).pathname.slice(1), 'new-jpeg', JPEG);
     const result = await call('POST', '/api/videos/update', { body: { id: video.id, posterVersion: poster.version } });
     expect(result.json.video.poster).toBe(`/t/${video.id}-${poster.version}.jpg`);
     expect(s3.objects.has(oldKey)).toBe(false);
+  });
+
+  test('poster upload URLs only accept a JPEG, and a poster stored with another type is refused and deleted', async () => {
+    const { call, s3 } = setup();
+    const { video, plan } = await upload(call, s3);
+    for (const url of [plan.posterUrl, (await call('POST', '/api/videos/poster', { body: { id: video.id } })).json.url]) {
+      expect(new URL(url).searchParams.get('X-Amz-SignedHeaders')).toBe('content-type;host');
+    }
+    const poster = (await call('POST', '/api/videos/poster', { body: { id: video.id } })).json;
+    const key = new URL(poster.url).pathname.slice(1);
+    s3.put(key, '<script>alert(1)</script>', { contentType: 'text/html' });
+    expect((await call('POST', '/api/videos/update', { body: { id: video.id, posterVersion: poster.version } })).statusCode).toBe(400);
+    expect(s3.objects.has(key)).toBe(false);
+  });
+
+  test('a finished upload larger than the limit is refused and deleted', async () => {
+    const { call, s3 } = setup();
+    const created = (await call('POST', '/api/uploads', { body: { title: 'x', contentType: 'video/mp4', size: 10 } })).json;
+    s3.completedSize = 10 * 1024 ** 3 + 1;
+    const done = await call('POST', '/api/uploads/complete', { body: { id: created.id, uploadId: created.uploadId, parts: [{ partNumber: 1, etag: '"abc"' }] } });
+    s3.completedSize = 0;
+    expect(done.statusCode).toBe(400);
+    expect(s3.objects.has(`v/${created.id}.mp4`)).toBe(false);
+    expect(s3.objects.has(`pending/${created.id}.json`)).toBe(false);
+    expect(s3.objects.has('meta/index.json') ? s3.json('meta/index.json').videos : []).toEqual([]);
   });
 
   test('replacing a video keeps its ID and details, serves the new file at a new key and deletes the old one', async () => {
@@ -213,7 +239,7 @@ describe('API', () => {
     const { video } = await upload(call, s3);
     const first = (await call('POST', '/api/uploads', { body: { ...body, replace: video.id } })).json;
     const firstPoster = new URL(first.posterUrl).pathname.slice(1);
-    s3.put(firstPoster, 'jpeg');
+    s3.put(firstPoster, 'jpeg', JPEG);
     const second = (await call('POST', '/api/uploads', { body: { ...body, replace: video.id } })).json;
     expect(s3.uploads.has(first.uploadId)).toBe(false);
     expect(s3.objects.has(firstPoster)).toBe(false);

@@ -34,6 +34,11 @@ export const STREAMING_APP = 'video.dliu.com';
 export const SCHEDULE_GROUP = 'video-streaming';
 /** Conversion waits until a file has stayed unchanged this long (it is often replaced while being edited). */
 export const CONVERT_DELAY_MINUTES = 120;
+/** Most API Lambda runs at once; the owner needs a few, so a flood is throttled rather than billed. */
+export const API_CONCURRENCY = 10;
+/** Microsoft API (API Gateway) limits per second for the whole API. */
+export const API_RATE_PER_SECOND = 10;
+export const API_BURST = 20;
 
 export interface VideoStackProps extends StackProps {
   /** Subdomain under the MainDomain export. */
@@ -95,6 +100,8 @@ export class VideoStack extends Stack {
       code: lambda.Code.fromAsset(path.join(ROOT, 'lambda/api')),
       timeout: Duration.seconds(30),
       memorySize: 256,
+      // Caps what a flood of requests can run up (viewers never call this function). Reserving costs nothing.
+      reservedConcurrentExecutions: API_CONCURRENCY,
       description: 'video.dliu.com sign-in (Microsoft Entra) and upload/edit/delete API',
       environment: {
         SITE_URL: siteUrl,
@@ -187,6 +194,11 @@ export class VideoStack extends Stack {
           authorizationScopes: [permission.scope],
         });
       }
+      // Requests over the limit get 429 before reaching the authorizer or the function.
+      (httpApi.defaultStage!.node.defaultChild as apigateway.CfnStage).defaultRouteSettings = {
+        throttlingRateLimit: API_RATE_PER_SECOND,
+        throttlingBurstLimit: API_BURST,
+      };
       api.addEnvironment('API_GATEWAY_ID', httpApi.apiId);
       api.addEnvironment('API_TENANT_ID', tenantId);
       api.addEnvironment('API_AUDIENCE', audience);
@@ -236,7 +248,9 @@ export class VideoStack extends Stack {
       securityHeadersBehavior: securityHeaders(["'self'", ...props.embedAncestors].join(' ')),
       customHeadersBehavior: { customHeaders: [permissions, { header: 'X-Robots-Tag', value: 'noindex', override: true }] },
     });
+    // Files are never pages: if one is opened directly, it runs no script and gets a unique origin.
     const fileSecurity: cloudfront.ResponseSecurityHeadersBehavior = {
+      contentSecurityPolicy: { contentSecurityPolicy: "default-src 'none'; sandbox", override: true },
       contentTypeOptions: { override: true },
       strictTransportSecurity: { accessControlMaxAge: Duration.days(365), includeSubdomains: false, override: true },
     };

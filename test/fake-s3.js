@@ -30,7 +30,7 @@ function createFakeS3() {
       case 'HeadObjectCommand': {
         const object = objects.get(input.Key);
         if (!object) throw error('NotFound', 404);
-        return { ETag: object.etag, ContentLength: object.body.length, ContentType: object.contentType };
+        return { ETag: object.etag, ContentLength: object.size ?? object.body.length, ContentType: object.contentType };
       }
       case 'PutObjectCommand': {
         const existing = objects.get(input.Key);
@@ -58,7 +58,11 @@ function createFakeS3() {
         const upload = uploads.get(input.UploadId);
         if (!upload) throw error('NoSuchUpload', 404);
         uploads.delete(input.UploadId);
-        put(input.Key, Buffer.alloc(fakeS3.completedSize || 1234), { contentType: upload.input.ContentType });
+        {
+          // A size can be faked without allocating it.
+          const size = fakeS3.completedSize || 1234;
+          put(input.Key, Buffer.alloc(Math.min(size, 1234)), { contentType: upload.input.ContentType, size });
+        }
         return {};
       }
       case 'AbortMultipartUploadCommand':

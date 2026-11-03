@@ -25,7 +25,7 @@ flowchart LR
   mc -->|job finished event| fn
 ```
 
-- **Streaming versions.** MediaConvert turns each upload into HLS in 1080p, 720p, 480p and 360p, never larger than the file. It starts once the file has stayed unchanged for 2 hours, because a video is often replaced several times while being edited; each replacement restarts the wait and cancels a running job. Until the versions are ready, and in browsers that can't play HLS, viewers get the original file. MP4 (H.264/AAC) plays everywhere; WebM, MOV, M4V and OGV are also accepted. CloudFront serves byte ranges, so seeking works. The owner sees the conversion status on the watch page, with **Convert now** and **Retry**. Guests don't see it.
+- **Streaming versions.** MediaConvert turns each upload into HLS in 1080p, 720p, 480p and 360p, never larger than the file. It starts once the file has stayed unchanged for 2 hours, because a video is often replaced several times while being edited; each replacement restarts the wait and cancels a running job. Until the versions are ready, and in browsers that can't play HLS, viewers get the original file. MP4 (H.264/AAC) plays everywhere; WebM, MOV, M4V and OGV are also accepted. CloudFront serves byte ranges, so seeking works. The owner sees the conversion status on the watch page, with **Convert now** and **Retry**. Guests don't see it. To cap the MediaConvert bill, videos longer than 6 hours aren't converted, each job is clipped to the declared length plus a minute, and at most 12 hours of video is converted per UTC day (about $32); past that the conversion fails with a message and **Retry** works the next day.
 - **Player.** [Plyr](https://github.com/sampotts/plyr) controls with [hls.js](https://github.com/video-dev/hls.js). Both are self-hosted in `web/vendor/` and loaded only when a video is shown. The ⚙ menu has Quality (Auto shows the level it is playing, for example "Auto (720p)"), Speed and Download (the original file). hls.js keeps 30 to 60 seconds downloaded ahead, the same in every browser. Auto never picks more pixels than the player shows. Safari on iPhone uses its own HLS player, which picks the quality itself.
 - **Uploads go straight from the browser to S3** using presigned multipart URLs. Parts are at least 16 MiB, four upload in parallel, and failed parts are retried. The browser also reads the duration and size and grabs a thumbnail frame.
 - **There is no database.** `meta/index.json` in the video bucket is the source of truth and is updated with conditional writes. The Lambda publishes `data/catalog.json` (the list of videos) and `data/videos/<id>.json` (one per video). Pages read these through CloudFront.
@@ -245,7 +245,10 @@ make test     # unit tests (Jest): API, auth, presigner, CloudFront Function, st
 make synth
 make diff
 make smoke    # end-to-end against the deployed site
+make pentest  # live security tests against the deployed site
 ```
+
+`make pentest` (`scripts/pentest.sh`) runs about 136 curl/openssl checks against https://video.dliu.com: every route without, with forged and with unsigned sessions, the managed API with bad tokens, the OIDC sign-in, traversal, hidden files, XSS, cache deception, CORS, TLS and headers. With AWS credentials it also checks the Lambda URL and `*.cloudfront.net` directly, the concurrency cap and throttle, and presigned poster URLs (wrong type, expired). It prints a Markdown table and exits non-zero on any failure. The results and the threat model are on the Security tab of `/docs`.
 
 `make smoke` (`scripts/smoke-test.js`) uploads a throwaway 20 MiB video in two parts straight to S3. It then checks CORS, publishing, byte-range serving, the poster, the catalog, the embed headers and editing, and deletes the video. It signs a 10-minute owner session with the key derived from the client secret in SSM, so it needs AWS credentials that can read `/video/*`. Use `node scripts/smoke-test.js --keep` to leave the video in place for a look in the browser.
 

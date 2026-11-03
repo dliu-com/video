@@ -10,6 +10,7 @@ const MAX_PARTS = 10000;
 const PARTS_PER_CALL = 100;
 const URL_SECONDS = 60 * 60;
 const MAX_POSTER_BYTES = 5 * MiB;
+const POSTER_TYPE = 'image/jpeg';
 
 // Served as uploaded, so only containers browsers can play (codecs inside are the uploader's concern).
 const CONTENT_TYPES = { 'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov', 'video/x-m4v': 'm4v', 'video/ogg': 'ogv' };
@@ -75,7 +76,9 @@ const NO_STREAMING = {
 
 function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate = async () => {}, streaming = NO_STREAMING }) {
   const sdk = () => require('@aws-sdk/client-s3');
-  const sign = (method, key, query) => presignUrl({ method, bucket, region, key, query, expiresIn: URL_SECONDS, now: now() });
+  const sign = (method, key, query, headers) => presignUrl({ method, bucket, region, key, query, headers, expiresIn: URL_SECONDS, now: now() });
+  // Posters are served from this site, so the upload URL only accepts a JPEG: S3 rejects any other Content-Type.
+  const signPoster = (id, version) => sign('PUT', store.posterKey(id, version), {}, { 'content-type': POSTER_TYPE });
 
   async function readPending(id, uploadId) {
     const found = await store.readJson(s3, bucket, store.pendingKey(videoId(id)));
@@ -142,8 +145,12 @@ function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate
 
   async function posterInfo(id, version) {
     if (!version) return null;
-    const head = await store.headObject(s3, bucket, store.posterKey(id, version));
-    return head && head.ContentLength <= MAX_POSTER_BYTES ? version : null;
+    const key = store.posterKey(id, version);
+    const head = await store.headObject(s3, bucket, key);
+    if (!head) return null;
+    if (head.ContentLength <= MAX_POSTER_BYTES && head.ContentType === POSTER_TYPE) return version;
+    await store.deleteKeys(s3, bucket, [key]);
+    return null;
   }
 
   return {
@@ -226,7 +233,7 @@ function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate
         uploadId: pending.uploadId,
         partSize: pending.partSize,
         partCount: pending.partCount,
-        posterUrl: pending.posterVersion ? sign('PUT', store.posterKey(id, pending.posterVersion)) : null,
+        posterUrl: pending.posterVersion ? signPoster(id, pending.posterVersion) : null,
       };
     },
 
@@ -261,6 +268,11 @@ function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate
       }));
       const head = await store.headObject(s3, bucket, key);
       if (!head) throw new Error('Uploaded video is missing');
+      // Part URLs cannot limit how much each part holds, so check the finished file.
+      if (head.ContentLength > maxBytes) {
+        await store.deleteKeys(s3, bucket, [key, store.pendingKey(pending.id), pending.posterVersion && store.posterKey(pending.id, pending.posterVersion)]);
+        throw new BadRequest('The uploaded file is larger than allowed');
+      }
       if (pending.replace) return finishReplacement(pending, key, head);
       const stamp = new Date(now()).toISOString();
       const video = {
@@ -303,7 +315,7 @@ function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate
       const index = await store.readIndex(s3, bucket);
       if (!index.videos.some((v) => v.id === id)) throw new NotFound('Video not found');
       const version = newVersion();
-      return { version, url: sign('PUT', store.posterKey(id, version)) };
+      return { version, url: signPoster(id, version) };
     },
 
     async update(body) {

@@ -22,6 +22,17 @@ const LADDER = [
   { size: 360, maxBitrate: 600000, quality: 7, audio: 96000 },
 ];
 const MIN_BITRATE = 250000;
+// Cost caps (MediaConvert bills per minute of output): longer videos keep only the original file, and at most
+// DAILY_SECONDS of video is converted per UTC day. Each job is clipped to the declared length plus a minute, so a
+// wrong declared length cannot make a job longer (or dearer) than counted.
+const MAX_SECONDS = 6 * 3600;
+const DAILY_SECONDS = 12 * 3600;
+const CLIP_MARGIN = 60;
+
+/** Seconds of video a job may make (and is counted for): the declared length plus a minute. */
+const jobSeconds = (video) => Math.ceil(Math.min(Number(video.duration) || MAX_SECONDS, MAX_SECONDS)) + CLIP_MARGIN;
+const pad = (n) => String(n).padStart(2, '0');
+const timecode = (seconds) => `${pad(Math.floor(seconds / 3600))}:${pad(Math.floor(seconds / 60) % 60)}:${pad(seconds % 60)}:00`;
 
 const even = (n) => Math.max(2, Math.round(n / 2) * 2);
 const newToken = () => crypto.randomBytes(6).toString('base64url');
@@ -56,12 +67,13 @@ function renditions(video) {
 }
 
 /** MediaConvert job settings: one HLS group, H.264 + AAC, single-pass (Basic pricing tier). */
-function jobSettings({ bucket, input, prefix, rungs }) {
+function jobSettings({ bucket, input, prefix, rungs, seconds = MAX_SECONDS + CLIP_MARGIN }) {
   return {
     TimecodeConfig: { Source: 'ZEROBASED' },
     Inputs: [{
       FileInput: `s3://${bucket}/${input}`,
       TimecodeSource: 'ZEROBASED',
+      InputClippings: [{ EndTimecode: timecode(seconds) }],
       // Phone videos carry a rotation flag; apply it so outputs play upright everywhere.
       VideoSelector: { Rotate: 'AUTO' },
       AudioSelectors: { 'Audio Selector 1': { DefaultSelection: 'DEFAULT' } },
@@ -216,6 +228,22 @@ function createStreaming({ s3, bucket, mediaconvert, scheduler, settings = {}, n
         log('Conversion skipped: state changed', { id });
         return null;
       }
+      const sameState = (s) => (s.token || null) === (token || null);
+      if (Number(video.duration) > MAX_SECONDS) {
+        return setStream(id, sameState, failed(`Videos longer than ${MAX_SECONDS / 3600} hours are not converted`));
+      }
+      const seconds = jobSeconds(video);
+      const day = iso().slice(0, 10);
+      const { result: allowed } = await store.updateIndex(s3, bucket, (idx) => {
+        const used = idx.conversions && idx.conversions.day === day ? idx.conversions.seconds : 0;
+        if (used + seconds > DAILY_SECONDS) return undefined;
+        idx.conversions = { day, seconds: used + seconds };
+        return true;
+      });
+      if (!allowed) {
+        log('Conversion refused: daily limit', { id, seconds });
+        return setStream(id, sameState, failed(`Daily conversion limit reached (${DAILY_SECONDS / 3600} hours of video a day); retry tomorrow`));
+      }
       const version = newToken();
       const rungs = renditions(video);
       const stream = {
@@ -230,7 +258,7 @@ function createStreaming({ s3, bucket, mediaconvert, scheduler, settings = {}, n
         const { CreateJobCommand } = mc();
         const result = await mediaconvert.send(new CreateJobCommand({
           Role: settings.roleArn,
-          Settings: jobSettings({ bucket, input: store.videoKey(id, video.ext, video.fileVersion), prefix: store.streamPrefix(id, version), rungs }),
+          Settings: jobSettings({ bucket, input: store.videoKey(id, video.ext, video.fileVersion), prefix: store.streamPrefix(id, version), rungs, seconds }),
           UserMetadata: { app: APP, videoId: id, version },
           StatusUpdateInterval: 'SECONDS_60',
         }));
@@ -301,4 +329,4 @@ function createStreaming({ s3, bucket, mediaconvert, scheduler, settings = {}, n
   };
 }
 
-module.exports = { APP, LADDER, createStreaming, jobSettings, renditions };
+module.exports = { APP, DAILY_SECONDS, LADDER, MAX_SECONDS, createStreaming, jobSettings, renditions };

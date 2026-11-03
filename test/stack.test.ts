@@ -101,6 +101,20 @@ test('Microsoft API is opt-in and every exposed route has its exact delegated sc
     });
     enabled.hasResourceProperties('AWS::ApiGatewayV2::Integration', { PayloadFormatVersion: '2.0' });
     enabled.hasOutput('MicrosoftApiUrl', { Value: Match.anyValue() });
+    enabled.hasResourceProperties('AWS::ApiGatewayV2::Stage', {
+      StageName: '$default', DefaultRouteSettings: { ThrottlingRateLimit: 10, ThrottlingBurstLimit: 20 },
+    });
+});
+
+test('a request flood is throttled instead of billed: the API Lambda has a concurrency cap', () => {
+  template.hasResourceProperties('AWS::Lambda::Function', Match.objectLike({ Handler: 'index.handler', ReservedConcurrentExecutions: 10 }));
+});
+
+test('files opened directly run no script (posters, videos, streams and data)', () => {
+  for (const policy of ['FileHeaders', 'StreamHeaders']) {
+    expect(headers(policy).ContentSecurityPolicy).toEqual({ ContentSecurityPolicy: "default-src 'none'; sandbox", Override: true });
+    expect(headers(policy).ContentTypeOptions).toEqual({ Override: true });
+  }
 });
 
 test('serves from every edge location over HTTP/2 and HTTP/3; HTML and catalog stay revalidated', () => {

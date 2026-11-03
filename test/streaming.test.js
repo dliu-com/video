@@ -206,6 +206,40 @@ describe('streaming versions', () => {
     expect((await call('POST', '/api/videos/convert', { id: '2020010100' })).statusCode).toBe(404);
   });
 
+  test('cost caps: jobs are clipped to the declared length, long videos are skipped, 12 hours a day', async () => {
+    const { s3, call, mediaconvert, advance } = setup();
+    const short = await upload(call, s3, { duration: 200 });
+    await call('POST', '/api/videos/convert', { id: short.id });
+    expect(lastJob(mediaconvert).input.Settings.Inputs[0].InputClippings).toEqual([{ EndTimecode: '00:04:20:00' }]);
+
+    const long = await upload(call, s3, { duration: 6 * 3600 + 1 });
+    const refused = await call('POST', '/api/videos/convert', { id: long.id });
+    expect(refused.json.video.conversion).toMatchObject({ status: 'failed', error: 'Videos longer than 6 hours are not converted' });
+    expect(mediaconvert.named('CreateJobCommand')).toHaveLength(1);
+
+    const first = await upload(call, s3, { duration: 5 * 3600 });
+    const second = await upload(call, s3, { duration: 5 * 3600 });
+    const third = await upload(call, s3, { duration: 2 * 3600 });
+    await call('POST', '/api/videos/convert', { id: first.id });
+    await call('POST', '/api/videos/convert', { id: second.id });
+    expect(mediaconvert.named('CreateJobCommand')).toHaveLength(3);
+    expect(lastJob(mediaconvert).input.Settings.Inputs[0].InputClippings).toEqual([{ EndTimecode: '05:01:00:00' }]);
+    await call('POST', '/api/videos/convert', { id: third.id });
+    expect(mediaconvert.named('CreateJobCommand')).toHaveLength(3);
+    expect(await conversion(call, third.id)).toMatchObject({ status: 'failed', error: expect.stringContaining('Daily conversion limit') });
+    // The next UTC day, Retry works.
+    advance(24 * 3600 * 1000);
+    expect((await call('POST', '/api/videos/convert', { id: third.id })).json.video.conversion.status).toBe('converting');
+    expect(mediaconvert.named('CreateJobCommand')).toHaveLength(4);
+  });
+
+  test('an unknown length is clipped at the 6-hour limit', async () => {
+    const { s3, call, mediaconvert } = setup();
+    const video = await upload(call, s3, { duration: undefined });
+    await call('POST', '/api/videos/convert', { id: video.id });
+    expect(lastJob(mediaconvert).input.Settings.Inputs[0].InputClippings).toEqual([{ EndTimecode: '06:01:00:00' }]);
+  });
+
   test('replacing the file cancels the conversion, removes the old versions and waits 2 hours again', async () => {
     const { s3, call, jobEvent, invalidated, mediaconvert, scheduler, advance } = setup();
     const video = await upload(call, s3);
