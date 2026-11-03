@@ -277,6 +277,19 @@ describe('API', () => {
     expect((await call('POST', '/api/videos/delete', { body: { id: video.id } })).statusCode).toBe(404);
   });
 
+  test('owner writes are logged with the action, ID and user', async () => {
+    const { call, s3 } = setup();
+    const { video } = await upload(call, s3);
+    const spy = jest.spyOn(console, 'info').mockImplementation(() => {});
+    try {
+      await call('POST', '/api/videos/delete', { body: { id: video.id } });
+      const logged = spy.mock.calls.map(([line]) => JSON.parse(line)).filter((entry) => entry.message === 'Owner action');
+      expect(logged).toEqual([{ message: 'Owner action', action: 'remove', id: video.id, by: 'me@example.com', via: 'site' }]);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   test('IDs are the UK upload date plus a number for that day', async () => {
     expect(ukDate(Date.UTC(2026, 9, 27, 23, 30))).toBe('20261027'); // GMT
     expect(ukDate(Date.UTC(2026, 6, 1, 23, 30))).toBe('20260702'); // BST: already the next day in the UK

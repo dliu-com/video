@@ -171,7 +171,11 @@ function createHandler(deps = {}) {
         // Cross-site requests carry no session (SameSite=Lax); the Origin check is a second guard.
         const origin = (event.headers && event.headers.origin) || '';
         if (!managedApi && origin !== siteUrl) return json(403, { error: 'Forbidden' });
-        return json(200, await videos[route.action](parseBody(event)));
+        const input = parseBody(event);
+        // Audit trail for owner writes (private log group, 30 days); uploads go straight to S3 and are otherwise unlogged.
+        console.info(JSON.stringify({ message: 'Owner action', action: route.action, id: typeof input.id === 'string' ? input.id.slice(0, 20) : undefined,
+          by: session.oid || session.user, via: managedApi ? 'api' : 'site' }));
+        return json(200, await videos[route.action](input));
       }
       if (path === '/api/me') return json(200, { user: session.user, name: session.name });
       if (path === '/api/videos') return json(200, await videos.list());
