@@ -68,7 +68,12 @@ function partPlan(size) {
   return { partSize, partCount: Math.ceil(size / partSize) };
 }
 
-function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate = async () => {} }) {
+const NO_STREAMING = {
+  enabled: false, plan: () => null, schedule: async () => {}, replaced: async () => {}, removed: async () => {},
+  convertNow: async () => ({ error: 'Streaming conversion is not set up' }),
+};
+
+function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate = async () => {}, streaming = NO_STREAMING }) {
   const sdk = () => require('@aws-sdk/client-s3');
   const sign = (method, key, query) => presignUrl({ method, bucket, region, key, query, expiresIn: URL_SECONDS, now: now() });
 
@@ -100,7 +105,11 @@ function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate
     const { index, result } = await store.updateIndex(s3, bucket, (idx) => {
       const video = idx.videos.find((v) => v.id === id);
       if (!video) return undefined;
-      old = { ext: video.ext, fileVersion: video.fileVersion, posterVersion: video.posterVersion };
+      old = { ext: video.ext, fileVersion: video.fileVersion, posterVersion: video.posterVersion, stream: video.stream };
+      // A new file needs new streaming versions; until they are made, players get the new file itself.
+      const stream = streaming.plan();
+      if (stream) video.stream = stream;
+      else delete video.stream;
       Object.assign(video, {
         ext: pending.ext,
         fileVersion: pending.fileVersion,
@@ -127,6 +136,7 @@ function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate
     ]);
     // Nothing links to the old file any more, but it is cached for a year, so drop it from the CDN.
     await invalidate([`/${oldFile}`, `/${store.videoDataKey(id)}`]);
+    await streaming.replaced(id, old.stream, result.stream);
     return { video: store.publicVideo(result), replaced: true };
   }
 
@@ -139,7 +149,7 @@ function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate
   return {
     async list() {
       const index = await store.readIndex(s3, bucket);
-      return { videos: index.videos.slice().sort(store.newestFirst).map(store.publicVideo) };
+      return { videos: index.videos.slice().sort(store.newestFirst).map(store.ownerVideo) };
     },
 
     /**
@@ -267,6 +277,8 @@ function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate
         createdAt: stamp,
         updatedAt: stamp,
       };
+      const stream = streaming.plan();
+      if (stream) video.stream = stream;
       const { index } = await store.updateIndex(s3, bucket, (idx) => {
         idx.videos = idx.videos.filter((v) => v.id !== video.id).concat(video);
         // Remember the highest number published each day, so a deleted video's number is never given out again.
@@ -276,6 +288,7 @@ function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate
       });
       await store.publish(s3, bucket, index, { changed: [video.id] }, now());
       await store.deleteKeys(s3, bucket, [store.pendingKey(video.id)]);
+      await streaming.schedule(video.id, video.stream);
       return { video: store.publicVideo(video) };
     },
 
@@ -332,8 +345,19 @@ function createVideos({ s3, bucket, region, maxBytes, now = Date.now, invalidate
       const file = store.videoKey(id, result.ext, result.fileVersion);
       await store.deleteKeys(s3, bucket, [file, result.posterVersion && store.posterKey(id, result.posterVersion)]);
       // The file is cached for a year, so drop it from the CDN too.
-      await invalidate([`/${file}`, `/t/${id}-*`, `/${store.videoDataKey(id)}`]);
+      await streaming.removed(id, result.stream);
+      await invalidate([`/${file}`, `/t/${id}-*`, `/${store.videoDataKey(id)}`,
+        ...(result.stream && result.stream.status === 'ready' ? [`/h/${id}-*`] : [])]);
       return { deleted: id };
+    },
+
+    /** Makes the streaming versions now instead of waiting (also Retry after a failure). */
+    async convert(body) {
+      const id = videoId(body.id);
+      const result = await streaming.convertNow(id);
+      if (result.notFound) throw new NotFound('Video not found');
+      if (result.error) throw new BadRequest(result.error);
+      return { video: store.ownerVideo(result.video) };
     },
   };
 }

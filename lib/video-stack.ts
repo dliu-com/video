@@ -7,6 +7,8 @@ import {
   aws_certificatemanager as acm,
   aws_cloudfront as cloudfront,
   aws_cloudfront_origins as origins,
+  aws_events as events,
+  aws_events_targets as eventTargets,
   aws_iam as iam,
   aws_lambda as lambda,
   aws_logs as logs,
@@ -14,6 +16,7 @@ import {
   aws_route53_targets as targets,
   aws_s3 as s3,
   aws_s3_deployment as s3deploy,
+  aws_scheduler as scheduler,
   aws_ssm as ssm,
   CfnOutput,
   Duration,
@@ -26,6 +29,11 @@ import apiRoutes from '../lambda/api/routes.json';
 
 const ROOT = path.join(__dirname, '..');
 export const PARAMETER_PREFIX = '/video';
+/** Marks this site's MediaConvert jobs (UserMetadata.app), so the event rule only sends those. Matches streaming.js. */
+export const STREAMING_APP = 'video.dliu.com';
+export const SCHEDULE_GROUP = 'video-streaming';
+/** Conversion waits until a file has stayed unchanged this long (it is often replaced while being edited). */
+export const CONVERT_DELAY_MINUTES = 120;
 
 export interface VideoStackProps extends StackProps {
   /** Subdomain under the MainDomain export. */
@@ -113,6 +121,51 @@ export class VideoStack extends Stack {
     }));
     const functionUrl = api.addFunctionUrl({ authType: lambda.FunctionUrlAuthType.AWS_IAM });
 
+    // ---------- Streaming versions (MediaConvert HLS), pay per converted minute ----------
+    const mediaConvertRole = new iam.Role(this, 'MediaConvertRole', {
+      assumedBy: new iam.ServicePrincipal('mediaconvert.amazonaws.com'),
+      description: 'video.dliu.com: MediaConvert reads uploaded videos (v/) and writes streaming versions (h/)',
+    });
+    videoBucket.grantRead(mediaConvertRole, 'v/*');
+    videoBucket.grantPut(mediaConvertRole, 'h/*');
+    const scheduleGroup = new scheduler.CfnScheduleGroup(this, 'ConversionSchedules', { name: SCHEDULE_GROUP });
+    const schedulerRole = new iam.Role(this, 'ConversionSchedulerRole', {
+      assumedBy: new iam.ServicePrincipal('scheduler.amazonaws.com', {
+        conditions: { StringEquals: { 'aws:SourceAccount': this.account } },
+      }),
+      description: 'video.dliu.com: starts the delayed conversion of an uploaded video',
+    });
+    api.grantInvoke(schedulerRole);
+    api.addEnvironment('MEDIACONVERT_ROLE_ARN', mediaConvertRole.roleArn);
+    api.addEnvironment('SCHEDULER_ROLE_ARN', schedulerRole.roleArn);
+    api.addEnvironment('SCHEDULE_GROUP', SCHEDULE_GROUP);
+    api.addEnvironment('CONVERT_DELAY_MINUTES', String(CONVERT_DELAY_MINUTES));
+    api.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['mediaconvert:CreateJob', 'mediaconvert:CancelJob', 'mediaconvert:GetJob'],
+      resources: [
+        this.formatArn({ service: 'mediaconvert', resource: 'jobs', resourceName: '*' }),
+        this.formatArn({ service: 'mediaconvert', resource: 'queues', resourceName: 'Default' }),
+      ],
+    }));
+    api.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['scheduler:CreateSchedule', 'scheduler:UpdateSchedule', 'scheduler:DeleteSchedule'],
+      resources: [this.formatArn({ service: 'scheduler', resource: 'schedule', resourceName: `${SCHEDULE_GROUP}/*` })],
+    }));
+    api.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['iam:PassRole'],
+      resources: [mediaConvertRole.roleArn, schedulerRole.roleArn],
+    }));
+    api.node.addDependency(scheduleGroup);
+    new events.Rule(this, 'ConversionFinished', {
+      description: 'video.dliu.com: a streaming conversion finished or failed',
+      eventPattern: {
+        source: ['aws.mediaconvert'],
+        detailType: ['MediaConvert Job State Change'],
+        detail: { status: ['COMPLETE', 'ERROR', 'CANCELED'], userMetadata: { app: [STREAMING_APP] } },
+      },
+      targets: [new eventTargets.LambdaFunction(api, { retryAttempts: 8 })],
+    });
+
     if (props.microsoftApi) {
       const parameter = (name: string) => ssm.StringParameter.valueForStringParameter(this, `${PARAMETER_PREFIX}/api-${name}`);
       const tenantId = parameter('tenant-id');
@@ -183,11 +236,16 @@ export class VideoStack extends Stack {
       securityHeadersBehavior: securityHeaders(["'self'", ...props.embedAncestors].join(' ')),
       customHeadersBehavior: { customHeaders: [permissions, { header: 'X-Robots-Tag', value: 'noindex', override: true }] },
     });
-    const fileHeaders = new cloudfront.ResponseHeadersPolicy(this, 'FileHeaders', {
-      securityHeadersBehavior: {
-        contentTypeOptions: { override: true },
-        strictTransportSecurity: { accessControlMaxAge: Duration.days(365), includeSubdomains: false, override: true },
-      },
+    const fileSecurity: cloudfront.ResponseSecurityHeadersBehavior = {
+      contentTypeOptions: { override: true },
+      strictTransportSecurity: { accessControlMaxAge: Duration.days(365), includeSubdomains: false, override: true },
+    };
+    const fileHeaders = new cloudfront.ResponseHeadersPolicy(this, 'FileHeaders', { securityHeadersBehavior: fileSecurity });
+    // MediaConvert cannot set Cache-Control on what it writes. Every conversion gets a new folder, so it never changes.
+    const immutable = { header: 'Cache-Control', value: 'public, max-age=31536000, immutable', override: false };
+    const streamHeaders = new cloudfront.ResponseHeadersPolicy(this, 'StreamHeaders', {
+      securityHeadersBehavior: fileSecurity,
+      customHeadersBehavior: { customHeaders: [immutable] },
     });
 
     // Central traffic monitoring (dliu-com/traffic-monitor): shared visitor cookie and city logging on pages.
@@ -239,6 +297,14 @@ export class VideoStack extends Stack {
       enableAcceptEncodingGzip: true,
       enableAcceptEncodingBrotli: true,
     });
+    const streamCache = new cloudfront.CachePolicy(this, 'StreamCache', {
+      comment: 'video.dliu.com streaming versions: versioned folders, cached for a year',
+      minTtl: Duration.seconds(0),
+      defaultTtl: Duration.days(365),
+      maxTtl: Duration.days(365),
+      enableAcceptEncodingGzip: true,
+      enableAcceptEncodingBrotli: true,
+    });
     const apiBehavior: cloudfront.BehaviorOptions = {
       origin: origins.FunctionUrlOrigin.withOriginAccessControl(functionUrl, { readTimeout: Duration.seconds(30) }),
       allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
@@ -255,6 +321,7 @@ export class VideoStack extends Stack {
         'embed/*': pageBehavior(embedHeaders),
         'v/*': fileBehavior,
         't/*': fileBehavior,
+        'h/*': { ...fileBehavior, cachePolicy: streamCache, responseHeadersPolicy: streamHeaders, compress: true },
         'data/*': { ...fileBehavior, cachePolicy: dataCache, compress: true },
         'api/*': { ...apiBehavior, allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL },
         'auth/*': apiBehavior,
@@ -292,10 +359,19 @@ export class VideoStack extends Stack {
     });
 
     new s3deploy.BucketDeployment(this, 'SiteContent', {
-      sources: [s3deploy.Source.asset(path.join(ROOT, 'web'))],
+      sources: [s3deploy.Source.asset(path.join(ROOT, 'web'), { exclude: ['vendor'] })],
       destinationBucket: siteBucket,
       // Browsers and CloudFront revalidate on every load (a 304 when unchanged), so a deploy shows up at once.
       cacheControl: [s3deploy.CacheControl.noCache()],
+      // vendor/ belongs to the deployment below; leave it alone when pruning.
+      exclude: ['vendor/*'],
+    });
+    // Player libraries (Plyr, hls.js). Their file names carry the version, so they can be cached for a year.
+    new s3deploy.BucketDeployment(this, 'PlayerLibraries', {
+      sources: [s3deploy.Source.asset(path.join(ROOT, 'web/vendor'))],
+      destinationBucket: siteBucket,
+      destinationKeyPrefix: 'vendor/',
+      cacheControl: [s3deploy.CacheControl.fromString('public, max-age=31536000, immutable')],
     });
 
     new route53.ARecord(this, 'AliasRecord', {

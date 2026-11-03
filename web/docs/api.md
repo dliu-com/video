@@ -22,13 +22,14 @@ The managed API accepts Microsoft-issued user access tokens. It can list videos,
 | Method and path | Required scope | Operation |
 | --- | --- | --- |
 | [GET /api/me](#get-api-me) | `video.read` | Read the authenticated user identity |
-| [GET /api/videos](#get-api-videos) | `video.read` | List full public video objects |
+| [GET /api/videos](#get-api-videos) | `video.read` | List video objects with their conversion status |
 | [POST /api/uploads](#post-api-uploads) | `video.write` | Start a new upload or file replacement |
 | [POST /api/uploads/parts](#post-api-uploads-parts) | `video.write` | Request presigned S3 part URLs |
 | [POST /api/uploads/complete](#post-api-uploads-complete) | `video.write` | Complete and publish the uploaded file |
 | [POST /api/uploads/abort](#post-api-uploads-abort) | `video.write` | Cancel an unfinished upload |
 | [POST /api/videos/update](#post-api-videos-update) | `video.write` | Edit details or attach a new poster |
 | [POST /api/videos/poster](#post-api-videos-poster) | `video.write` | Request a new poster upload URL |
+| [POST /api/videos/convert](#post-api-videos-convert) | `video.write` | Make the streaming versions now |
 | [POST /api/videos/delete](#post-api-videos-delete) | `video.delete` | Delete a published video |
 
 `video.write` does not include `video.delete`. There is no managed `GET /api/videos/<id>`, PUT/PATCH endpoint, token-management route or login/logout route.
@@ -103,6 +104,7 @@ Responses from list, completion and update use this complete public object:
 | `contentType` | Video MIME type selected at upload start |
 | `src` | Public path on **https://video.dliu.com**, not on the managed API origin |
 | `poster` | Public poster path on the website, or null |
+| `hls` | Streaming versions, an HLS playlist path on the website such as `/h/2026110100-EfGh5678/index.m3u8`. Only present once they are ready; until then players use `src` |
 
 The public watch URL is `https://video.dliu.com/<id>` and the embed is `https://video.dliu.com/embed/<id>`. Replacement files get versioned paths such as `/v/2026110100-AbCd1234.webm`; never build a file path from the ID yourself. Use `src` from the current response.
 
@@ -132,7 +134,16 @@ No body or query parameters. Response (200):
 {"videos":[]}
 ```
 
-Each array item is a full Video object, including description, content type and size. Newest `createdAt` comes first, with descending ID as the tie-breaker. There is no pagination, filter or per-video managed GET endpoint.
+Each array item is a full Video object, including description, content type and size, plus a `conversion` object that is not in the public JSON, for example `{"status":"scheduled","scheduledFor":"2026-11-01T14:00:00.000Z"}`:
+
+| `status` | Other fields |
+| --- | --- |
+| `none` | None. No streaming versions (uploaded before they existed, or conversion is off) |
+| `scheduled` | `scheduledFor`: conversion starts once the file has been unchanged for 2 hours |
+| `converting` | `startedAt`, `qualities` (for example `["1080p","720p","480p","360p"]`) |
+| `ready` | `startedAt`, `finishedAt`, `qualities` |
+| `failed` | `startedAt` (if it started), `finishedAt`, `error`. Players use the original file |
+ Newest `createdAt` comes first, with descending ID as the tie-breaker. There is no pagination, filter or per-video managed GET endpoint.
 
 ## Multipart upload and replacement
 
@@ -319,6 +330,30 @@ video_api POST /api/videos/update \
 ```
 
 Attaching a nonexistent/too-large poster returns 400. The size is checked when attaching; the API does not validate image bytes or MIME type. Do not confuse the returned poster version with the multipart `uploadId`.
+
+## Streaming versions
+
+After a completed upload or replacement, the server makes HLS streaming versions (1080p, 720p, 480p and 360p, never larger than the file) with AWS MediaConvert. It waits until the file has not been replaced for 2 hours, because each replacement starts the wait again and discards versions made from the old file.
+
+### POST /api/videos/convert
+
+Required scope: `video.write`.
+
+Request:
+
+```json
+{"id":"2026110100"}
+```
+
+Response (200):
+
+```json
+{"video":{"id":"2026110100","title":"Example video","description":"A short description.","createdAt":"2026-11-01T12:00:00.000Z","updatedAt":"2026-11-01T12:00:00.000Z","duration":61.5,"width":1920,"height":1080,"size":41943040,"contentType":"video/mp4","src":"/v/2026110100.mp4","poster":null,"conversion":{"status":"converting","startedAt":"2026-11-01T12:00:00.000Z","qualities":["1080p","720p","480p","360p"]}}}
+```
+
+The `conversion` is normally `converting`, or `failed` if the job could not start.
+
+Skips the 2-hour wait, or retries after `failed`. Returns 400 while converting, once the versions are ready, or when conversion is not set up; 404 for an unknown video. Conversion costs about $0.05 per video minute, so avoid calling it for a file you are about to replace. Poll `GET /api/videos` to follow the status; conversion usually takes a few minutes.
 
 ## Deleting
 

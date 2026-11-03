@@ -17,7 +17,7 @@
   <main class="dl-main">
     <p class="dl-muted" id="status">Loading…</p>
     <section id="video" hidden>
-      <div class="player"><video id="player" controls playsinline preload="metadata"></video></div>
+      <div class="player"><video id="player" playsinline preload="metadata"></video></div>
       <h1 class="watch-title" id="title"></h1>
       <div class="row spread">
         <span class="dl-muted" id="meta"></span>
@@ -56,6 +56,11 @@
           </p>
           <p class="dl-muted" id="edit-status"></p>
         </form>
+        <h2 class="streaming-title">Streaming versions</h2>
+        <p class="dl-muted">Smaller copies in several qualities, so viewers on slow or mobile connections start quickly.
+          They are made once the file has not been replaced for 2 hours; until then viewers get the original file.</p>
+        <p class="row"><span id="conversion">Checking…</span>
+          <button type="button" class="dl-button" id="convert" hidden>Convert now</button></p>
       </div>
     </section>
   </main>

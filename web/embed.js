@@ -1,5 +1,6 @@
 // The embeddable player: /embed/<id>?t=<seconds>&autoplay=1&muted=1&loop=1
 import { getData } from './common.js';
+import { createPlayer } from './player.js';
 
 const id = location.pathname.split('/').pop() || '';
 const params = new URLSearchParams(location.search);
@@ -16,19 +17,17 @@ async function load() {
   link.href = `/${encodeURIComponent(video.id)}`;
   link.parentElement.hidden = false;
 
-  if (video.poster) player.poster = video.poster;
-  // Browsers only autoplay muted video.
-  const autoplay = params.get('autoplay') === '1';
-  player.muted = autoplay || params.get('muted') === '1';
-  player.loop = params.get('loop') === '1';
-  player.autoplay = autoplay;
-  const start = Number(params.get('t') || params.get('start'));
-  if (start > 0) player.addEventListener('loadedmetadata', () => { player.currentTime = start; }, { once: true });
-  player.src = video.src;
   player.addEventListener('play', () => document.body.classList.add('playing'));
   player.addEventListener('pause', () => document.body.classList.remove('playing'));
   player.hidden = false;
   message.hidden = true;
+  // Browsers only autoplay muted video.
+  await createPlayer(player, video, {
+    start: Number(params.get('t') || params.get('start')) || 0,
+    autoplay: params.get('autoplay') === '1',
+    muted: params.get('muted') === '1',
+    loop: params.get('loop') === '1',
+  });
 }
 
 load().catch(() => {

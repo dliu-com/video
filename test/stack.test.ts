@@ -39,7 +39,7 @@ test('video bucket accepts browser uploads from the site and cleans up abandoned
 
 test('routes files, data and the API to the right origins', () => {
   expect(distributionConfig().CacheBehaviors.map((b: { PathPattern: string }) => b.PathPattern))
-    .toEqual(['embed/*', 'v/*', 't/*', 'data/*', 'api/*', 'auth/*']);
+    .toEqual(['embed/*', 'v/*', 't/*', 'h/*', 'data/*', 'api/*', 'auth/*']);
   expect(behavior('api/*').AllowedMethods).toContain('POST');
   expect(behavior('auth/*').AllowedMethods).not.toContain('POST');
   expect(behavior('v/*').Compress).toBe(false);
@@ -107,5 +107,50 @@ test('serves from every edge location over HTTP/2 and HTTP/3; HTML and catalog s
   expect(distributionConfig().PriceClass).toBe('PriceClass_All');
   expect(distributionConfig().HttpVersion).toBe('http2and3');
   const deployments = Object.values(template.findResources('Custom::CDKBucketDeployment'));
-  expect(deployments.map((d: any) => d.Properties.SystemMetadata)).toEqual([{ 'cache-control': 'no-cache' }]);
+  // Pages revalidate; the versioned player libraries are cached for a year.
+  expect(deployments.map((d: any) => [d.Properties.DestinationBucketKeyPrefix, d.Properties.SystemMetadata])).toEqual([
+    [undefined, { 'cache-control': 'no-cache' }],
+    ['vendor/', { 'cache-control': 'public, max-age=31536000, immutable' }],
+  ]);
+  expect((deployments[0] as any).Properties.Exclude).toEqual(['vendor/*']);
+});
+
+test('streaming versions: MediaConvert after a delay, finished jobs reported back, cached for a year', () => {
+  template.hasResourceProperties('AWS::IAM::Role', {
+    AssumeRolePolicyDocument: Match.objectLike({
+      Statement: [Match.objectLike({ Principal: { Service: 'mediaconvert.amazonaws.com' } })],
+    }),
+  });
+  template.hasResourceProperties('AWS::IAM::Role', {
+    AssumeRolePolicyDocument: Match.objectLike({
+      Statement: [Match.objectLike({
+        Principal: { Service: 'scheduler.amazonaws.com' },
+        Condition: { StringEquals: { 'aws:SourceAccount': '123456789012' } },
+      })],
+    }),
+  });
+  template.hasResourceProperties('AWS::Scheduler::ScheduleGroup', { Name: 'video-streaming' });
+  template.hasResourceProperties('AWS::Lambda::Function', {
+    Environment: { Variables: Match.objectLike({
+      MEDIACONVERT_ROLE_ARN: Match.anyValue(), SCHEDULER_ROLE_ARN: Match.anyValue(),
+      SCHEDULE_GROUP: 'video-streaming', CONVERT_DELAY_MINUTES: '120',
+    }) },
+  });
+  template.hasResourceProperties('AWS::Events::Rule', {
+    EventPattern: {
+      'source': ['aws.mediaconvert'],
+      'detail-type': ['MediaConvert Job State Change'],
+      'detail': { status: ['COMPLETE', 'ERROR', 'CANCELED'], userMetadata: { app: ['video.dliu.com'] } },
+    },
+  });
+  const stream = behavior('h/*');
+  expect(stream.Compress).toBe(true);
+  const policy = Object.entries(template.findResources('AWS::CloudFront::CachePolicy'))
+    .find(([id]) => id.startsWith('StreamCache'))![1].Properties.CachePolicyConfig;
+  expect(policy.DefaultTTL).toBe(365 * 24 * 3600);
+  const streamHeaders = Object.entries(template.findResources('AWS::CloudFront::ResponseHeadersPolicy'))
+    .find(([id]) => id.startsWith('StreamHeaders'))![1].Properties.ResponseHeadersPolicyConfig;
+  expect(streamHeaders.CustomHeadersConfig.Items).toEqual([
+    { Header: 'Cache-Control', Value: 'public, max-age=31536000, immutable', Override: false },
+  ]);
 });

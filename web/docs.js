@@ -47,7 +47,7 @@ function architecture(root) {
 
   root.append(stats([
     ['0 servers', 'nothing runs while nobody is watching', 'power'],
-    ['1 Lambda', 'only for sign-in and owner changes', 'lambda'],
+    ['1 Lambda', 'only for sign-in, owner changes and conversions', 'lambda'],
     ['2 S3 buckets', 'site files, and videos with their data', 's3'],
     ['1 CloudFront', 'serves pages, videos and the website API', 'cloudfront'],
   ]));
@@ -76,6 +76,7 @@ function architecture(root) {
         nodes: [
           { icon: 'lambda', title: 'API Lambda', text: 'Node.js 22 on ARM, 256 MB; sign-in, upload URLs, edits and deletes' },
           { icon: 'entra', title: 'Microsoft Entra ID', text: 'Owner sign-in (OpenID Connect)' },
+          { icon: 'film', title: 'MediaConvert', text: 'Makes the streaming versions; started by a one-time EventBridge schedule, reports back through an EventBridge rule' },
         ],
       },
       {
@@ -98,10 +99,15 @@ function architecture(root) {
       { icon: 'page', title: 'Page', text: '/<id> from the site bucket' },
       { icon: 'code', title: 'Details', text: '/data/videos/<id>.json: title, description, poster' },
       { icon: 'eye', title: 'Poster', text: '/t/<id>-<version>.jpg, cached for a year' },
-      { icon: 'play', title: 'Video', text: '/v/<id>.mp4 in byte ranges, so seeking works at once', tone: 'good' },
+      { icon: 'code', title: 'Player', text: '/player.js, then Plyr and hls.js from /vendor/, cached for a year' },
+      { icon: 'play', title: 'Video', text: 'Streaming versions from /h/<id>-<version>/ in 6-second pieces, or the original file in byte ranges', tone: 'good' },
     ],
     note: 'The home page reads /data/catalog.json, the list of all videos. Video files never change once uploaded, so CloudFront and browsers cache them for a year; the JSON files are revalidated on every load, so edits appear at once.',
   }));
+
+  add('h2', 'Streaming versions and the player');
+  add('p', 'Each upload is converted by AWS MediaConvert into HLS in 1080p, 720p, 480p and 360p (never larger than the file, and never at a higher bitrate). The conversion starts once the file has not been replaced for 2 hours, because a video is often replaced several times while being edited; each replacement restarts the wait, cancels a running job and discards versions made from the old file. Until the versions are ready, viewers get the original file. The owner sees the status on the watch page and can Convert now or Retry; guests do not see it.');
+  add('p', 'The player is Plyr with hls.js, both served from this site. Quality defaults to Auto, which shows the level it is playing (for example "Auto (720p)"), picks a level to suit the connection, and never more pixels than the player shows. The ⚙ menu also has Speed, Picture in picture and Download (the original file). hls.js keeps 30 to 60 seconds downloaded ahead, the same in every browser. Safari on iPhone uses its own HLS player and picks the quality itself. If the player libraries cannot load, the browser’s own controls play the original file.');
 
   add('h2', 'Uploading a video');
   root.append(flow({
@@ -217,16 +223,18 @@ function cost(root) {
     ['S3 requests', '$0.005 per 1,000 PUTs (one per 16 MiB part on upload); $0.0004 per 1,000 GETs on CloudFront cache misses', num('$0')],
     ['CloudFront', 'Free each month: 1 TB out, 10 million requests, 2 million function runs. Then $0.085 per GB (Europe and North America) and about $0.01 per 10,000 requests', num('$0')],
     ['CloudFront Functions', 'Pages and visitor ID functions: $0.10 per million runs after the free 2 million', num('$0')],
+    ['MediaConvert', 'Basic tier, single pass: about $0.05 per minute of video for the four streaming qualities, once per final file (a 5-minute video ≈ $0.25). Nothing while idle', num('$0')],
+    ['EventBridge Scheduler', 'One one-time schedule per upload or replacement; 14 million free runs a month. MediaConvert job events are free', num('$0')],
     ['API Lambda', '$0.20 per million calls and $0.0000133 per GB-second (ARM). Free each month: 1 million calls and 400,000 GB-seconds. Viewers never call it', num('$0')],
     ['API Gateway HTTP API (optional)', 'Additional per-request charges for Microsoft-token API calls; no fixed monthly fee. Public video playback does not use it', num('$0')],
-    ['CDN invalidations', 'Three paths per delete; the first 1,000 paths a month are free, then $0.005 per path', num('$0')],
+    ['CDN invalidations', 'Three or four paths per delete; the first 1,000 paths a month are free, then $0.005 per path', num('$0')],
     ['Parameter Store', 'Standard parameters; read at most every 5 minutes while the Lambda is warm', num('$0')],
     ['KMS', 'The AWS-managed aws/ssm key decrypts the client secret; 20,000 free requests a month', num('$0')],
     ['CloudWatch Logs', 'Lambda logs kept one month; $0.57 per GB, a few KB a month', num('$0')],
     ['Certificate (ACM) and DNS', 'Public certificates are free; alias records to CloudFront answer free in the existing dliu.com zone', num('$0')],
     ['Traffic logs', 'Billed to the traffic monitor: $0.25 per GB of log lines', num('< $0.01')],
   ]));
-  root.append(callout('power', 'There is no EC2, container, load balancer, NAT gateway, database, WAF or transcoding service, so nothing costs money just by existing. Delete every video and the bill is effectively $0.'));
+  root.append(callout('power', 'There is no EC2, container, load balancer, NAT gateway, database or WAF, and MediaConvert is billed only per minute converted, so nothing costs money just by existing. Delete every video and the bill is effectively $0.'));
 
   add('h2', 'Examples');
   root.append(table(['Situation', 'Estimate'], [
@@ -238,7 +246,7 @@ function cost(root) {
     ['Each full 500 MB view beyond the free 1 TB', num('≈ $0.043')],
     ['Opening the home page (HTML, CSS, JS, catalog, posters)', num('$0 in the free tier')],
   ]));
-  add('p', 'A viewer who watches only part of a video is billed only for what the browser downloaded, because the player fetches the file in byte ranges.', 'dg-note');
+  add('p', 'A viewer who watches only part of a video is billed only for what the browser downloaded: the player fetches 6-second pieces (or byte ranges of the original file) and keeps at most about a minute ahead. Viewers on phones or slow connections get a smaller quality, so a view often costs less than the original file size suggests.', 'dg-note');
 
   root.append(flow({
     title: 'What keeps the bill small',
@@ -357,7 +365,7 @@ function security(root) {
     'There is no WAF or rate limit; heavy viewing or hot-linking is paid for per GB after the free tier.',
     'Sessions cannot be revoked on the server; a stolen cookie works until it expires (at most 12 hours). Rotating the client secret revokes all sessions.',
     'Sign-out is a plain link, so another site could sign the owner out. Nothing else can be triggered that way.',
-    'Uploaded videos are not scanned or transcoded; they are served exactly as uploaded.',
+    'Uploaded videos are not scanned. The original file stays public and downloadable; the streaming versions are made from it by MediaConvert.',
   ]));
 
   root.append(more('Response headers on every page',

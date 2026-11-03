@@ -1,10 +1,14 @@
 AWS_REGION ?= eu-west-1
 STACK_NAME ?= Video
 
-.PHONY: install test synth diff deploy set-secrets outputs smoke
+.PHONY: install vendor test synth diff deploy set-secrets outputs smoke
 
 install:
 	npm ci
+
+# Copies Plyr and hls.js from node_modules into web/vendor/ (committed). Run after upgrading either.
+vendor:
+	node scripts/vendor.js
 
 test:
 	npm test -- --runInBand

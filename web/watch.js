@@ -1,4 +1,5 @@
 import { api, captureFrame, copyText, formatDate, formatSize, getData, isOwner, putBlob, renderNav } from './common.js';
+import { createPlayer } from './player.js';
 
 const $ = (id) => document.getElementById(id);
 // Videos live at /<id>; old-style /watch?v=<id> links are rewritten to that.
@@ -11,6 +12,7 @@ if (id !== pathId && ID_PATTERN.test(id)) {
   history.replaceState(null, '', `/${id}${query.size ? `?${query}` : ''}`);
 }
 let video;
+let plyr = null;
 
 function showVideo(data) {
   video = data;
@@ -82,7 +84,8 @@ function setupOwner() {
       await putBlob(upload.url, blob, 'image/jpeg');
       const result = await api('/api/videos/update', { id: video.id, posterVersion: upload.version });
       showVideo(result.video);
-      player.poster = result.video.poster;
+      if (plyr) plyr.poster = result.video.poster;
+      else player.poster = result.video.poster;
       status.className = 'dl-success';
       status.textContent = 'Thumbnail updated.';
     } catch (error) {
@@ -92,6 +95,8 @@ function setupOwner() {
       busy(false);
     }
   });
+
+  setupConversion();
 
   $('delete').addEventListener('click', async () => {
     if (!confirm(`Delete "${video.title}"? This removes the file for good, and embeds of it stop working.`)) return;
@@ -107,18 +112,74 @@ function setupOwner() {
   });
 }
 
+// ---------- Streaming versions (owner only; guests just get the best version there is) ----------
+const UK = 'Europe/London';
+function ukTime(iso) {
+  const date = new Date(iso);
+  const day = (d) => d.toLocaleDateString('en-GB', { timeZone: UK });
+  const time = date.toLocaleTimeString('en-GB', { timeZone: UK, hour: '2-digit', minute: '2-digit' });
+  return day(date) === day(new Date())
+    ? `${time} UK time`
+    : `${date.toLocaleDateString('en-GB', { timeZone: UK, day: 'numeric', month: 'short' })} ${time} UK time`;
+}
+const minutes = (from, to) => Math.max(1, Math.round((new Date(to) - new Date(from)) / 60000));
+
+function conversionText(c) {
+  const qualities = (c.qualities || []).join(', ');
+  switch (c.status) {
+    case 'scheduled': return `Scheduled for ${ukTime(c.scheduledFor)}.`;
+    case 'converting': return `Converting since ${ukTime(c.startedAt)}${qualities ? ` (${qualities})` : ''}…`;
+    case 'ready': return `Ready: ${qualities}. Converted ${ukTime(c.finishedAt)} (took ${minutes(c.startedAt, c.finishedAt)} min).`;
+    case 'failed': return `Conversion failed${c.error ? ` (${c.error})` : ''}, so viewers get the original file.`;
+    default: return 'None yet, so viewers get the original file.';
+  }
+}
+
+function setupConversion() {
+  const text = $('conversion');
+  const button = $('convert');
+  let timer;
+  const show = (conversion) => {
+    clearTimeout(timer);
+    text.className = conversion.status === 'failed' ? 'dl-error' : '';
+    text.textContent = conversionText(conversion);
+    button.hidden = !['none', 'scheduled', 'failed'].includes(conversion.status);
+    button.textContent = conversion.status === 'failed' ? 'Retry' : 'Convert now';
+    if (conversion.status === 'converting') timer = setTimeout(refresh, 20000);
+  };
+  async function refresh() {
+    try {
+      const { videos } = await api('/api/videos');
+      const mine = videos.find((v) => v.id === video.id);
+      if (mine) show(mine.conversion);
+    } catch (error) {
+      text.className = 'dl-error';
+      text.textContent = error.message;
+    }
+  }
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    try {
+      show((await api('/api/videos/convert', { id: video.id })).video.conversion);
+    } catch (error) {
+      text.className = 'dl-error';
+      text.textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
+  refresh();
+}
+
 async function load() {
   if (!ID_PATTERN.test(id)) throw new Error('Video not found.');
   const data = await getData(`/data/videos/${id}.json`);
   if (!data) throw new Error('Video not found. It may have been deleted.');
   showVideo(data);
   const player = $('player');
-  if (data.poster) player.poster = data.poster;
-  player.src = data.src;
-  const start = Number(new URLSearchParams(location.search).get('t'));
-  if (start > 0) player.addEventListener('loadedmetadata', () => { player.currentTime = start; }, { once: true });
   $('status').hidden = true;
   $('video').hidden = false;
+  ({ plyr } = await createPlayer(player, data, { start: Number(new URLSearchParams(location.search).get('t')) || 0 }));
 
   $('share').addEventListener('click', () => copyText(`${location.origin}/${video.id}`, 'Link copied'));
   $('embed-toggle').addEventListener('click', () => { $('embed').hidden = !$('embed').hidden; updateEmbed(); });

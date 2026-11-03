@@ -42,6 +42,13 @@ function createFakeS3() {
       case 'DeleteObjectCommand':
         objects.delete(input.Key);
         return {};
+      case 'ListObjectsV2Command': {
+        const keys = [...objects.keys()].filter((key) => key.startsWith(input.Prefix || '')).sort();
+        return { Contents: keys.map((Key) => ({ Key })), IsTruncated: false };
+      }
+      case 'DeleteObjectsCommand':
+        for (const { Key } of input.Delete.Objects) objects.delete(Key);
+        return {};
       case 'CreateMultipartUploadCommand': {
         const uploadId = crypto.randomBytes(6).toString('hex');
         uploads.set(uploadId, { key: input.Key, input });

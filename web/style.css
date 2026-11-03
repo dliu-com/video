@@ -99,7 +99,7 @@ textarea.code { font-family: var(--dl-mono); font-size: 12px; min-height: 90px; 
 
 /* Embed player */
 body.embed { background: #000; min-height: 0; height: 100vh; height: 100dvh; overflow: hidden; }
-body.embed video { position: fixed; inset: 0; width: 100%; height: 100%; background: #000; }
+body.embed > video { position: fixed; inset: 0; width: 100%; height: 100%; background: #000; }
 body.embed .overlay {
   position: fixed; left: 0; right: 0; top: 0; padding: 10px 14px; z-index: 2; pointer-events: none;
   background: linear-gradient(rgba(0, 0, 0, 0.7), transparent); transition: opacity 0.25s;
@@ -107,3 +107,15 @@ body.embed .overlay {
 body.embed .overlay a { color: #fff; font-size: 15px; font-weight: 600; pointer-events: auto; text-shadow: 0 1px 2px #000; }
 body.embed.playing .overlay { opacity: 0; }
 body.embed .message { color: #ccc; display: grid; place-items: center; height: 100vh; height: 100dvh; font-size: 15px; padding: 0 16px; text-align: center; }
+
+/* Player (Plyr, see player.js) */
+:root { --plyr-color-main: var(--dl-accent, #2f6fde); }
+.player .plyr { width: 100%; height: 100%; }
+.player .plyr video, body.embed .plyr video { object-fit: contain; }
+.plyr .plyr__menu__container a.plyr__control { color: inherit; text-decoration: none; }
+.streaming-title { margin-top: 26px; font-size: 17px; }
+body.embed .plyr { position: fixed; inset: 0; width: 100%; height: 100%; }
+/* Short players (phones in portrait): the ⚙ menu scrolls instead of being cut off at the top. */
+.player { container-type: size; }
+.plyr__menu__container > div { max-height: calc(100vh - 70px); overflow-y: auto; overscroll-behavior: contain; }
+.player .plyr__menu__container > div { max-height: calc(100cqh - 64px); }

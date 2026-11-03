@@ -4,6 +4,8 @@
 //   v/<id>.<ext>             the video file, served as uploaded
 //   v/<id>-<version>.<ext>   a replacement file (a new key, so the year-long CDN cache never serves the old one)
 //   t/<id>-<version>.jpg     poster image (a new version gets a new key, so caches never go stale)
+//   h/<id>-<version>/...     streaming (HLS) versions made by MediaConvert: index.m3u8 plus one playlist and
+//                            6-second segments per quality (a new conversion gets a new folder)
 //   meta/index.json          every video: the source of truth (not reachable from CloudFront)
 //   pending/<id>.json        an upload in progress (not reachable from CloudFront)
 //   data/catalog.json        every video, for the home page (served by CloudFront)
@@ -14,6 +16,8 @@ const videoDataKey = (id) => `data/videos/${id}.json`;
 const pendingKey = (id) => `pending/${id}.json`;
 const videoKey = (id, ext, version) => (version ? `v/${id}-${version}.${ext}` : `v/${id}.${ext}`);
 const posterKey = (id, version) => `t/${id}-${version}.jpg`;
+const streamPrefix = (id, version) => `h/${id}-${version}/`;
+const streamKey = (id, version) => `${streamPrefix(id, version)}index.m3u8`;
 
 const s3sdk = () => require('@aws-sdk/client-s3');
 
@@ -42,6 +46,18 @@ async function writeJson(s3, bucket, key, value, extra = {}) {
 async function deleteKeys(s3, bucket, keys) {
   const { DeleteObjectCommand } = s3sdk();
   await Promise.all(keys.filter(Boolean).map((Key) => s3.send(new DeleteObjectCommand({ Bucket: bucket, Key }))));
+}
+
+/** Deletes every object whose key starts with the prefix. */
+async function deletePrefix(s3, bucket, prefix) {
+  const { ListObjectsV2Command, DeleteObjectsCommand } = s3sdk();
+  let token;
+  do {
+    const page = await s3.send(new ListObjectsV2Command({ Bucket: bucket, Prefix: prefix, ContinuationToken: token }));
+    const objects = (page.Contents || []).map(({ Key }) => ({ Key }));
+    if (objects.length) await s3.send(new DeleteObjectsCommand({ Bucket: bucket, Delete: { Objects: objects, Quiet: true } }));
+    token = page.IsTruncated ? page.NextContinuationToken : undefined;
+  } while (token);
 }
 
 async function headObject(s3, bucket, key) {
@@ -91,7 +107,26 @@ const publicVideo = (video) => ({
   contentType: video.contentType,
   src: `/${videoKey(video.id, video.ext, video.fileVersion)}`,
   poster: video.posterVersion ? `/${posterKey(video.id, video.posterVersion)}` : null,
+  // Only once MediaConvert has finished; until then (or if it failed) players use `src`.
+  ...(video.stream && video.stream.status === 'ready' ? { hls: `/${streamKey(video.id, video.stream.version)}` } : {}),
 });
+
+/** The conversion state for the owner. Job IDs and folder versions stay private. */
+function conversionStatus(stream) {
+  if (!stream) return { status: 'none' };
+  const pick = {
+    scheduled: ['scheduledFor'],
+    converting: ['startedAt', 'qualities'],
+    ready: ['startedAt', 'finishedAt', 'qualities'],
+    failed: ['startedAt', 'finishedAt', 'error'],
+  }[stream.status] || [];
+  const status = { status: stream.status };
+  for (const key of pick) if (stream[key] !== undefined) status[key] = stream[key];
+  return status;
+}
+
+/** What the owner API returns: the public details plus the conversion state. */
+const ownerVideo = (video) => ({ ...publicVideo(video), conversion: conversionStatus(video.stream) });
 
 const newestFirst = (a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id);
 
@@ -116,17 +151,22 @@ async function publish(s3, bucket, index, { changed = [], removed = [] } = {}, n
 module.exports = {
   CATALOG_KEY,
   INDEX_KEY,
+  conversionStatus,
   deleteKeys,
+  deletePrefix,
   headObject,
   isConflict,
   isMissing,
   newestFirst,
+  ownerVideo,
   pendingKey,
   posterKey,
   publicVideo,
   publish,
   readIndex,
   readJson,
+  streamKey,
+  streamPrefix,
   updateIndex,
   videoDataKey,
   videoKey,

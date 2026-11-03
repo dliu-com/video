@@ -13,14 +13,20 @@ request/response fields and the direct-to-S3 multipart workflow. Agents can read
 flowchart LR
   viewer[Browser] --> cf[CloudFront<br>video.dliu.com]
   cf -->|pages, /embed/*| site[(S3 site bucket)]
-  cf -->|/v/*, /t/*, /data/*| videos[(S3 video bucket)]
+  cf -->|/v/*, /t/*, /h/*, /data/*| videos[(S3 video bucket)]
   cf -->|/api/*, /auth/*| fn[Lambda function URL]
   fn --> videos
   fn --> ssm[SSM parameters]
   owner[Owner's browser] -->|presigned multipart PUT| videos
+  fn -->|one-time schedule, 2 h| sched[EventBridge Scheduler]
+  sched --> fn
+  fn -->|CreateJob| mc[MediaConvert]
+  mc -->|HLS to h/| videos
+  mc -->|job finished event| fn
 ```
 
-- **Videos are served as uploaded.** There is no transcoding. MP4 (H.264/AAC) plays everywhere; WebM, MOV, M4V and OGV are also accepted. CloudFront serves byte ranges, so seeking works.
+- **Streaming versions.** MediaConvert turns each upload into HLS in 1080p, 720p, 480p and 360p, never larger than the file. It starts once the file has stayed unchanged for 2 hours, because a video is often replaced several times while being edited; each replacement restarts the wait and cancels a running job. Until the versions are ready, and in browsers that can't play HLS, viewers get the original file. MP4 (H.264/AAC) plays everywhere; WebM, MOV, M4V and OGV are also accepted. CloudFront serves byte ranges, so seeking works. The owner sees the conversion status on the watch page, with **Convert now** and **Retry**. Guests don't see it.
+- **Player.** [Plyr](https://github.com/sampotts/plyr) controls with [hls.js](https://github.com/video-dev/hls.js). Both are self-hosted in `web/vendor/` and loaded only when a video is shown. The ⚙ menu has Quality (Auto shows the level it is playing, for example "Auto (720p)"), Speed, Picture in picture and Download (the original file). hls.js keeps 30 to 60 seconds downloaded ahead, the same in every browser. Auto never picks more pixels than the player shows. Safari on iPhone uses its own HLS player, which picks the quality itself.
 - **Uploads go straight from the browser to S3** using presigned multipart URLs. Parts are at least 16 MiB, four upload in parallel, and failed parts are retried. The browser also reads the duration and size and grabs a thumbnail frame.
 - **There is no database.** `meta/index.json` in the video bucket is the source of truth and is updated with conditional writes. The Lambda publishes `data/catalog.json` (the list of videos) and `data/videos/<id>.json` (one per video). Pages read these through CloudFront.
 - Every video is listed on the home page and can be watched or embedded by anyone with its link.
@@ -35,7 +41,9 @@ Nothing runs while nobody is using the site, and there is no fixed monthly fee. 
 | --- | --- |
 | S3 | Storage (Intelligent-Tiering for videos) and requests |
 | CloudFront | Data transfer and requests. The free tier includes 1 TB and 10M requests per month. |
-| Lambda | Invocations. Only page loads by the owner and API calls use it. |
+| Lambda | Invocations. Only page loads by the owner, API calls and conversions use it. |
+| MediaConvert | About $0.05 per minute of video for the four streaming qualities (Basic tier, single pass), only when a file is converted |
+| EventBridge Scheduler and rules | One schedule per upload; 14 million free invocations a month. MediaConvert events are free. |
 | API Gateway HTTP API (optional) | Requests to the Microsoft-token API; no fixed monthly charge |
 | SSM Parameter Store | Standard parameters, which are free |
 | Route 53, ACM | Covered by the existing hosted zone; public certificates are free |
@@ -47,9 +55,10 @@ When idle, the only cost is video storage. See [/docs#cost](https://video.dliu.c
 | Path | What |
 | --- | --- |
 | `lib/video-stack.ts` | The CDK stack |
-| `lambda/api/` | API and sign-in Lambda (`index.js` routes, `videos.js` upload/edit/delete, `store.js` S3 data, `auth.js` Entra, `presign.js` SigV4) |
+| `lambda/api/` | API and sign-in Lambda (`index.js` routes, `videos.js` upload/edit/delete, `streaming.js` MediaConvert conversion, `store.js` S3 data, `auth.js` Entra, `presign.js` SigV4) |
 | `functions/pages.js` | CloudFront Function for clean URLs (`/<id>`, `/embed/<id>`, `/upload`, `/docs`) |
-| `web/` | Static pages: home, watch, upload, embed, and docs (`docs.js` content, `docs-api.html` and `docs-api.js` render `docs/api.md`, `diagram.js` diagram kit from traffic-monitor) |
+| `web/` | Static pages: home, watch, upload, embed, and docs (`docs.js` content, `docs-api.html` and `docs-api.js` render `docs/api.md`, `diagram.js` diagram kit from traffic-monitor). `player.js` is the shared player |
+| `web/vendor/` | Plyr and hls.js with their version in the file names, copied from `node_modules` by `make vendor` (`scripts/vendor.js`) and committed |
 | `config/site.json` | Subdomain, sites allowed to embed, upload size cap |
 | `scripts/set-secrets.sh` | Stores the Entra app credentials in SSM |
 
@@ -218,8 +227,10 @@ CloudFront serves from all edge locations (price class All) over HTTP/2 and HTTP
 | --- | --- | --- |
 | Video bucket `v/*` (video files) | Up to a year (`public, max-age=31536000, immutable`) | Never overwritten: a replacement gets a new versioned key. Replace and delete invalidate the old paths from the Lambda. |
 | Video bucket `t/*` (posters) | Up to a year (same header) | Every poster has a versioned key. Delete invalidates `/t/<id>-*`. |
+| Video bucket `h/*` (streaming versions) | Up to a year (CloudFront adds `public, max-age=31536000, immutable`; MediaConvert can't set it) | Every conversion writes a new folder `h/<id>-<version>/`. Replace and delete remove the folder and invalidate `/h/<id>-*` if it was published. |
 | Video bucket `data/*` (catalog and video details) | Revalidated with S3 on every request (`no-cache`) | Nothing to clear. Replace and delete also invalidate the video's details. |
 | Site bucket (pages, scripts, styles) | Revalidated on every request (`no-cache`, set by the deploy) | Nothing to clear. |
+| Site bucket `vendor/*` (Plyr, hls.js) | Up to a year (`immutable`) | The version is in the file name; an upgrade adds new files. |
 | `/api/*`, `/auth/*` | Never cached | Not applicable. |
 
 There is no automatic clearing (S3 EventBridge → invalidation Lambda), on purpose. All of the dliu.com sites use that pattern only for buckets whose edge-cached objects can change outside a deploy without an invalidation. Here, the only edge-cached objects are video files and posters. The app never rewrites them under the same key, and it already invalidates the paths it removes. A rule would mostly fire for new uploads, which were never cached, and would spend invalidation paths from the 1,000 free each month that all the sites share. The other prefixes are no-cache, and `meta/` and `pending/` aren't served.

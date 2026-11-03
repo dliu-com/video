@@ -83,17 +83,20 @@ function sameShape(actual, example) {
   } else expect(typeof actual).toBe(typeof example);
 }
 
-test('documented request examples exercise all nine handlers locally with matching response shapes', async () => {
+test('documented request examples exercise all ten handlers locally with matching response shapes', async () => {
   const original = { ...process.env };
   const tenant = '11111111-1111-4111-8111-111111111111';
   const application = '22222222-2222-4222-8222-222222222222';
   Object.assign(process.env, { API_GATEWAY_ID: 'docs-test-api', API_TENANT_ID: tenant, API_AUDIENCE: application,
     API_CLIENT_ID: application, SITE_URL: 'https://video.dliu.com', VIDEO_BUCKET: 'docs-test-bucket',
     AWS_REGION: 'eu-west-1', AWS_ACCESS_KEY_ID: 'AKIDEXAMPLE', AWS_SECRET_ACCESS_KEY: 'test-secret',
-    MAX_UPLOAD_BYTES: String(50 * 1024 ** 3) });
+    MAX_UPLOAD_BYTES: String(50 * 1024 ** 3), MEDIACONVERT_ROLE_ARN: 'arn:aws:iam::123456789012:role/mediaconvert',
+    SCHEDULER_ROLE_ARN: 'arn:aws:iam::123456789012:role/scheduler', SCHEDULE_GROUP: 'video-streaming' });
+  const fakeAws = (reply) => ({ send: async (command) => reply(command.constructor.name) });
   try {
     const s3 = createFakeS3();
     const handler = createHandler({ s3, now: () => Date.UTC(2026, 10, 1, 12), invalidate: async () => {},
+      mediaconvert: fakeAws(() => ({ Job: { Id: 'job-1' } })), scheduler: fakeAws(() => ({})),
       loadConfig: () => { throw new Error('Docs managed examples must not load website secrets'); } });
     const call = async (route, body) => {
       const [method, rawPath] = route.split(' ');
@@ -114,6 +117,7 @@ test('documented request examples exercise all nine handlers locally with matchi
     const plan = await call('POST /api/uploads', examples['POST /api/uploads'][0]);
     await call('POST /api/uploads/parts', { ...examples['POST /api/uploads/parts'][0], id: plan.id, uploadId: plan.uploadId });
     await call('POST /api/uploads/complete', { ...examples['POST /api/uploads/complete'][0], id: plan.id, uploadId: plan.uploadId });
+    await call('POST /api/videos/convert', { ...examples['POST /api/videos/convert'][0], id: plan.id });
     await call('POST /api/videos/update', { ...examples['POST /api/videos/update'][0], id: plan.id });
     await call('POST /api/videos/poster', { ...examples['POST /api/videos/poster'][0], id: plan.id });
     const cancelled = await call('POST /api/uploads', examples['POST /api/uploads'][0]);
