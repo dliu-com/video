@@ -271,9 +271,10 @@ function security(root) {
   const FIXED = { text: t('✓ 已修复', '✓ Fixed'), className: 'status' };
   const LOW = { text: t('低', 'Low'), className: 'risk-low' };
   const MEDIUM = { text: t('中', 'Medium'), className: 'risk-medium' };
+  const CRITICAL = { text: t('严重', 'Critical'), className: 'risk-critical' };
   const DATE = '2026-11-03';
 
-  root.append(callout('shield', t('2026 年 11 月 3 日进行了完整的安全审查：威胁建模、针对线上网站的渗透测试（136 项检查，全部通过）以及代码审查。发现 5 个问题，均已修复、加上回归测试并重新部署。', 'Full security review on 3 November 2026: threat model, penetration tests against the live site (136 checks, all passing) and a code review. It found 5 issues; all are fixed, covered by regression tests and redeployed.')));
+  root.append(callout('shield', t('2026 年 11 月 3 日进行了完整的安全审查：威胁建模、针对线上网站的渗透测试（142 项检查，全部通过）以及代码审查。发现 5 个问题；之后的独立复查又发现一个严重问题（V-6）。全部 6 个问题均已修复、加上回归测试并重新部署。', 'Full security review on 3 November 2026: threat model, penetration tests against the live site (142 checks, all passing) and a code review. It found 5 issues, and an independent retest then found a critical one (V-6). All 6 are fixed, covered by regression tests and redeployed.')));
 
   root.append(tiers({
     title: t('信任边界', 'Trust boundaries'),
@@ -342,7 +343,7 @@ function security(root) {
   add('p', t('S 冒充、T 篡改、R 否认、I 信息泄露、D 拒绝服务（含账单攻击）、E 权限提升。', 'S spoofing, T tampering, R repudiation, I information disclosure, D denial of service (including the bill), E elevation of privilege.'), 'dg-note');
   root.append(table([t('组件', 'Component'), t('威胁', 'Threats'), t('控制措施', 'Controls')], [
     [t('CloudFront 和页面', 'CloudFront and pages'), t('T 缓存投毒/欺骗；I 隐藏文件、源码映射；E 点击劫持', 'T cache poisoning/deception; I hidden files, source maps; E clickjacking'), t('/api 不缓存；缓存键不含未声明的请求头；只部署 web/ 文件；frame-ancestors 和 X-Frame-Options', '/api is never cached; no unkeyed headers in the cache key; only web/ files are deployed; frame-ancestors and X-Frame-Options')],
-    [t('网站 API（Lambda）', 'Website API (Lambda)'), t('S 伪造会话；T CSRF、注入、路径遍历；D 请求洪水；E IDOR', 'S forged sessions; T CSRF, injection, traversal; D request floods; E IDOR'), t('HMAC 会话（恒定时间比较）；严格的 Origin；编号格式 ^\\d{10}$；没有数据库或命令；只有一位管理员，所以没有其他用户的数据；同时运行数上限 10', 'HMAC session (constant-time compare); exact Origin; IDs must match ^\\d{10}$; no database or shell; one owner, so no other user’s data; at most 10 runs at once')],
+    [t('网站 API（Lambda）', 'Website API (Lambda)'), t('S 伪造会话；T CSRF、注入、路径遍历；D 请求洪水；E IDOR', 'S forged sessions; T CSRF, injection, traversal; D request floods; E IDOR'), t('HMAC 会话（恒定时间比较，登录和会话使用不同密钥和类型）；严格的 Origin；编号格式 ^\\d{10}$；没有数据库或命令；只有一位管理员，所以没有其他用户的数据；同时运行数上限 10', 'HMAC session (constant-time compare; separate keys and types for sign-in and session); exact Origin; IDs must match ^\\d{10}$; no database or shell; one owner, so no other user’s data; at most 10 runs at once')],
     [t('登录（OpenID Connect）', 'Sign-in (OpenID Connect)'), t('S 授权码拦截、重放；T 开放重定向、CRLF；R 未记录的登录', 'S code interception, replay; T open redirect, CRLF; R unrecorded sign-ins'), t('PKCE S256、state、nonce；固定 redirect_uri；检查签名、iss、tid、aud、exp；返回路径只能是本站路径；登录和拒绝都写入日志（保留 1 个月）', 'PKCE S256, state, nonce; fixed redirect_uri; signature, iss, tid, aud and exp checked; return path must be a path on this site; sign-ins and refusals are logged (kept 1 month)')],
     [t('托管 API（API Gateway）', 'Managed API (API Gateway)'), t('S alg none、错误的 aud/iss/azp；E 缺少权限范围或角色；D 洪水', 'S alg none, wrong aud/iss/azp; E missing scope or role; D floods'), t('网关 JWT 授权器（RS256、iss、aud）；Lambda 再检查 azp、scp 和 api.access 角色；阶段限流每秒 10、突发 20', 'Gateway JWT authorizer (RS256, iss, aud); the Lambda checks azp, scp and the api.access role again; stage throttle 10 per second, burst 20')],
     [t('S3 上传（预签名网址）', 'S3 uploads (presigned URLs)'), t('T 上传 HTML 当作封面（存储型 XSS）、覆盖其他文件；D 超大文件', 'T HTML uploaded as a poster (stored XSS), overwriting other files; D oversized files'), t('网址只对一个键和一小时签名；封面网址签名 Content-Type image/jpeg；完成时检查大小和类型，不符合就删除；文件带沙箱 CSP', 'URLs are signed for one key and one hour; poster URLs sign Content-Type image/jpeg; size and type checked on completion and deleted if wrong; files carry a sandbox CSP')],
@@ -365,10 +366,11 @@ function security(root) {
     ['V-3', MEDIUM, t('Lambda 和托管 API 没有并发或速率上限', 'No concurrency or rate cap on the Lambda and the managed API'), t('Lambda 预留并发 10；API 阶段限流 10/秒、突发 20', 'Lambda reserved concurrency 10; API stage throttle 10/s, burst 20'), FIXED],
     ['V-4', LOW, t('直接打开的文件没有 CSP', 'Files opened directly had no CSP'), t("v/、t/、h/、data/ 发送 default-src 'none'; sandbox", "v/, t/, h/ and data/ send default-src 'none'; sandbox"), FIXED],
     ['V-5', MEDIUM, t('转换次数和时长没有上限；被盗的会话可以反复替换并转换很长的文件', 'Conversions had no count or length cap; a stolen session could replace and convert very long files repeatedly'), t('每天 12 小时、单个 6 小时、按声明时长裁剪', '12 hours a day, 6 hours each, clipped to the declared length'), FIXED],
+    ['V-6', CRITICAL, t('登录时发给任何人的临时 Cookie 与会话使用同一个密钥签名且没有类型，把它当会话 Cookie 重放（再伪造 Origin）就能获得管理员权限', 'The temporary sign-in cookie given to anyone was signed with the session key and had no type, so replaying it as the session cookie (plus a forged Origin) gave owner access'), t('登录和会话使用不同的 HMAC 密钥和 typ 字段；会话必须是 typ session 且有用户；更换密钥标签使旧 Cookie 全部失效', 'Separate HMAC keys and a typ field for sign-in and session; a session must be typ session with a user; new key labels void all old cookies'), FIXED],
   ]));
 
   add('h2', t('线上渗透测试', 'Live penetration test'));
-  add('p', t('用 make pentest（scripts/pentest.sh，基于 curl 和 openssl）针对 https://video.dliu.com 运行，可以随时重新运行；有 AWS 凭证时还会检查直接访问源站、并发上限和预签名网址。下表汇总了 136 项检查。', 'Run against https://video.dliu.com with make pentest (scripts/pentest.sh, curl and openssl); anyone can rerun it. With AWS credentials it also checks direct origin access, the concurrency cap and presigned URLs. The table summarises the 136 checks.'));
+  add('p', t('用 make pentest（scripts/pentest.sh，基于 curl 和 openssl）针对 https://video.dliu.com 运行，可以随时重新运行；有 AWS 凭证时还会检查直接访问源站、并发上限和预签名网址。下表汇总了 142 项检查。', 'Run against https://video.dliu.com with make pentest (scripts/pentest.sh, curl and openssl); anyone can rerun it. With AWS credentials it also checks direct origin access, the concurrency cap and presigned URLs. The table summarises the 142 checks.'));
   root.append(table([t('测试', 'Test'), t('预期', 'Expected'), t('实际', 'Actual'), t('日期', 'Date'), t('状态', 'Status')], [
     [t('每个 /api 路由：没有会话、伪造会话、未签名会话、没有 __Host- 前缀', 'Every /api route: no session, forged, unsigned, without the __Host- prefix'), '401', '401', DATE, PASS],
     [t('POST 缺少正文哈希（CloudFront 对 Lambda 签名）', 'POST without the body hash (CloudFront signing to the Lambda)'), '403', '403', DATE, PASS],
@@ -376,6 +378,7 @@ function security(root) {
     [t('托管 API：没有令牌、垃圾令牌、alg none、HS256、伪造 RS256', 'Managed API: no token, garbage, alg none, HS256, forged RS256'), '401', '401', DATE, PASS],
     [t('托管 API：60 个无令牌请求的突发', 'Managed API: burst of 60 tokenless requests'), t('全部 401', 'all 401'), t('全部 401', 'all 401'), DATE, PASS],
     [t('登录：PKCE S256、state、nonce、固定 redirect_uri、Cookie 属性', 'Sign-in: PKCE S256, state, nonce, fixed redirect_uri, cookie flags'), t('都存在', 'all present'), t('都存在', 'all present'), DATE, PASS],
+    [t('把登录 Cookie 当会话重放：GET /api/me、/api/videos，POST 删除、更新、上传、转换', 'Sign-in cookie replayed as the session: GET /api/me, /api/videos, POST delete, update, uploads, convert'), '401', '401', DATE, PASS],
     [t('回调：缺少或伪造 state', 'Callback: missing or forged state'), t('400，没有会话', '400, no session'), t('400，没有会话', '400, no session'), DATE, PASS],
     [t('回调错误中的 XSS 和 CRLF；返回路径中的 CRLF；退出登录的重定向', 'XSS and CRLF in the callback error; CRLF in the return path; logout redirect'), t('不反射；Location: /', 'not reflected; Location: /'), t('不反射；Location: /', 'not reflected; Location: /'), DATE, PASS],
     [t('路径遍历到 meta/ 和 pending/（含编码）', 'Traversal to meta/ and pending/ (including encoded)'), '400 / 403', '400 / 403', DATE, PASS],

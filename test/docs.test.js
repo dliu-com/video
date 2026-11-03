@@ -103,7 +103,7 @@ test('docs record the CDN caching and automatic-clearing decision and the curren
 
 test('security docs list every review finding and how to rerun the live tests', () => {
   const text = renderDocs().security.textContent;
-  for (const id of ['V-1', 'V-2', 'V-3', 'V-4', 'V-5']) expect(text).toContain(id);
+  for (const id of ['V-1', 'V-2', 'V-3', 'V-4', 'V-5', 'V-6']) expect(text).toContain(id);
   for (const expected of ['make pentest', 'Denial of wallet', 'STRIDE', 'gitleaks', 'npm audit', "default-src 'none'; sandbox"]) {
     expect(text).toContain(expected);
   }
