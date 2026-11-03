@@ -73,7 +73,7 @@ test('docs preserve Video permissions, assigned roles, approved client, rollout 
   ]) expect(text).toContain(expected);
   const readme = fs.readFileSync(path.join(__dirname, '../README.md'), 'utf8');
   for (const expected of [
-    '/video/api-tenant-id', '/video/api-audience', '/video/api-client-id',
+    '/dliu/entra-tenant-id', '/dliu/api-app-id',
     'The same shared dliu API application/client ID',
     'Authenticated standard-user gateway success remains unverified',
     'no forensic\nzeroization is promised',

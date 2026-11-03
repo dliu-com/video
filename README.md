@@ -69,13 +69,15 @@ When idle, the only cost is video storage. See [/docs#cost](https://video.dliu.c
 Requirements: the root `dliu.com` stack (exports `MainDomain`, `MainHostedZoneId`) and traffic-monitor (exports `TrafficVisitorFunctionArn`, `TrafficGeoOriginRequestPolicyId`) must already be deployed in eu-west-1.
 
 1. In the Microsoft Entra app registration, add the **Web** redirect URI `https://video.dliu.com/auth/callback`, and create a client secret. Optionally, set *Enterprise applications → (the app) → Assignment required = Yes* and assign only the people who may upload. The app itself only checks that the account is in the root domain.
-2. Store the app credentials (prompts for tenant ID, client ID and client secret; the secret is not echoed):
+2. Store the app credentials (prompts for the client ID and client secret; the secret is not echoed):
 
    ```sh
    make set-secrets
    ```
 
-   They go to SSM as `/video/entra-tenant-id`, `/video/entra-client-id` and `/video/entra-client-secret` (SecureString). Run it again any time to rotate the secret.
+   They go to SSM as `/video/entra-client-id` and `/video/entra-client-secret` (SecureString). Run it again any time to rotate the secret.
+   The tenant ID is not stored per app: the Lambda reads the shared `/dliu/entra-tenant-id` parameter from the
+   [dliu-com/audit](https://github.com/dliu-com/audit) stack, which must be deployed first.
 3. Install and deploy:
 
    ```sh
@@ -113,13 +115,13 @@ same-origin checks. Arbitrary headers cannot supply gateway identity.
    `dliu.com` users to this role. Do not assign guests. The former `video.access` role is not accepted.
    Manage access there, not in a local email/user allowlist. On Entra Free, assign users individually.
 3. Use the shared resource/client configuration from the [Auth API documentation](https://auth.dliu.com/docs/api).
-   Store these three non-secret **String** parameters in eu-west-1:
+   The deploy reads two shared non-secret **String** parameters in eu-west-1, owned by the
+   [dliu-com/audit](https://github.com/dliu-com/audit) stack (Video keeps no copies):
 
-   | Parameter | Value |
+   | Parameter | Used as |
    | --- | --- |
-   | `/video/api-tenant-id` | The Entra directory ID |
-   | `/video/api-audience` | The shared dliu API application/client ID (a GUID, without `api://`) |
-   | `/video/api-client-id` | The same shared dliu API application/client ID (the only approved SPA `azp`) |
+   | `/dliu/entra-tenant-id` | The Entra directory ID (issuer and `tid`) |
+   | `/dliu/api-app-id` | The shared dliu API application/client ID (a GUID, without `api://`), used as the token audience. The same shared dliu API application/client ID is also the only approved SPA `azp` |
 
 4. Set `microsoftApi` to `true` in `config/site.json`, deploy the whole Video stack, and obtain
    `MicrosoftApiUrl` from `make outputs`. Keep the flag enabled on subsequent deployments.
@@ -169,7 +171,7 @@ website configuration and public signing keys are separate caches, not API-token
 Request-local values and warm-runtime memory may remain until garbage collection; no forensic
 zeroization is promised. Website sign-in, playback and embeds are unchanged.
 
-The API accepts only the single client configured in `/video/api-client-id`. Tokens come only from
+The API accepts only the single client configured in `/dliu/api-app-id`. Tokens come only from
 Central Microsoft sign-in at auth.dliu.com; `scripts/api-client.js` has no sign-in of its own.
 
 ### Optional live smoke test

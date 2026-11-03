@@ -29,6 +29,9 @@ import apiRoutes from '../lambda/api/routes.json';
 
 const ROOT = path.join(__dirname, '..');
 export const PARAMETER_PREFIX = '/video';
+// Shared by every dliu.com app; owned by the dliu-com/audit stack.
+export const SHARED_TENANT_PARAMETER = '/dliu/entra-tenant-id';
+export const SHARED_API_APP_PARAMETER = '/dliu/api-app-id';
 /** Marks this site's MediaConvert jobs (UserMetadata.app), so the event rule only sends those. Matches streaming.js. */
 export const STREAMING_APP = 'video.dliu.com';
 export const SCHEDULE_GROUP = 'video-streaming';
@@ -107,6 +110,7 @@ export class VideoStack extends Stack {
         SITE_URL: siteUrl,
         ROOT_DOMAIN: rootDomain,
         PARAMETER_PREFIX,
+        TENANT_PARAMETER: SHARED_TENANT_PARAMETER,
         VIDEO_BUCKET: videoBucket.bucketName,
         MAX_UPLOAD_BYTES: String(props.maxUploadBytes),
       },
@@ -120,6 +124,12 @@ export class VideoStack extends Stack {
     api.addToRolePolicy(new iam.PolicyStatement({
       actions: ['ssm:GetParameters'],
       resources: [this.formatArn({ service: 'ssm', resource: 'parameter', resourceName: PARAMETER_PREFIX.slice(1) + '/*' })],
+    }));
+    // The shared IDs: exactly these two parameters, nothing else under /dliu/.
+    api.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['ssm:GetParameters'],
+      resources: [SHARED_TENANT_PARAMETER, SHARED_API_APP_PARAMETER].map((name) =>
+        this.formatArn({ service: 'ssm', resource: 'parameter', resourceName: name.slice(1) })),
     }));
     api.addToRolePolicy(new iam.PolicyStatement({
       actions: ['kms:Decrypt'],
@@ -174,10 +184,10 @@ export class VideoStack extends Stack {
     });
 
     if (props.microsoftApi) {
-      const parameter = (name: string) => ssm.StringParameter.valueForStringParameter(this, `${PARAMETER_PREFIX}/api-${name}`);
-      const tenantId = parameter('tenant-id');
-      const audience = parameter('audience');
-      const clientId = parameter('client-id');
+      const tenantId = ssm.StringParameter.valueForStringParameter(this, SHARED_TENANT_PARAMETER);
+      // The shared "dliu API" application is both the token audience and the only approved client (azp).
+      const audience = ssm.StringParameter.valueForStringParameter(this, SHARED_API_APP_PARAMETER);
+      const clientId = audience;
       const httpApi = new apigateway.HttpApi(this, 'MicrosoftApi', {
         description: 'Video API: Microsoft Entra access tokens, delegated permissions and assigned users',
       });

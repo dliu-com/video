@@ -22,7 +22,7 @@ diff:
 deploy: test
 	AWS_REGION=$(AWS_REGION) npm run deploy
 
-# Prompts for the Microsoft Entra app's tenant ID, client ID and client secret and stores them in SSM.
+# Prompts for the Microsoft Entra app's client ID and client secret and stores them in SSM (the tenant ID is shared: /dliu/entra-tenant-id).
 set-secrets:
 	AWS_REGION=$(AWS_REGION) scripts/set-secrets.sh
 

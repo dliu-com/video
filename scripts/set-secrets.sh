@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Stores the Microsoft Entra sign-in settings in SSM Parameter Store.
+# Stores this app's Microsoft Entra client ID and secret in SSM Parameter Store.
+# The tenant ID is shared by every dliu.com app: /dliu/entra-tenant-id (dliu-com/audit stack).
 # Values are read interactively and passed to AWS via a private temp file, so they never
 # appear in shell history, process arguments, or this repository.
 set -euo pipefail
@@ -36,13 +37,11 @@ prompt() { # var label default
 echo "Microsoft Entra settings for video.dliu.com (region $REGION)."
 echo "In the app registration, add the Web redirect URI: https://video.dliu.com/auth/callback"
 echo "Press Enter to keep the value shown in brackets."
-prompt TENANT_ID "Directory (tenant) ID" "$(current entra-tenant-id)"
 prompt CLIENT_ID "Application (client) ID" "$(current entra-client-id)"
 read -r -s -p "Client secret VALUE (hidden; Enter to keep current): " CLIENT_SECRET; echo
 
-[[ -n "$TENANT_ID" && -n "$CLIENT_ID" ]] || { echo "Tenant ID and client ID are required." >&2; exit 1; }
+[[ -n "$CLIENT_ID" ]] || { echo "Client ID is required." >&2; exit 1; }
 
-put entra-tenant-id String "$TENANT_ID"
 put entra-client-id String "$CLIENT_ID"
 if [[ -n "$CLIENT_SECRET" ]]; then
   put entra-client-secret SecureString "$CLIENT_SECRET"

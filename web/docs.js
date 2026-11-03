@@ -84,7 +84,7 @@ function architecture(root) {
         nodes: [
           { icon: 's3', title: t('网站存储桶', 'Site bucket'), text: t('本站的 HTML、CSS 和 JavaScript', 'The HTML, CSS and JavaScript of this site') },
           { icon: 'film', title: t('视频存储桶', 'Video bucket'), text: t('视频、封面和发布的目录 JSON', 'Videos, posters and the published catalog JSON') },
-          { icon: 'ssm', title: t('Parameter Store', 'Parameter Store'), text: t('Entra 租户、客户端 ID 和加密的客户端密钥', 'Entra tenant, client ID and encrypted client secret') },
+          { icon: 'ssm', title: t('Parameter Store', 'Parameter Store'), text: t('本应用的客户端 ID 和加密的客户端密钥；Entra 租户和共享 dliu API 的 ID 来自所有 dliu.com 应用共用的 /dliu/ 参数', 'This app’s client ID and encrypted client secret; the Entra tenant and shared dliu API IDs come from the /dliu/ parameters shared by every dliu.com app') },
         ],
       },
     ],
@@ -196,7 +196,7 @@ function architecture(root) {
     list([
       t('一个 AWS CDK 堆栈（TypeScript）Video，位于 eu-west-1；按 CloudFront 的要求，证书在 us-east-1。make deploy 负责构建和部署。', 'One AWS CDK stack (TypeScript), Video, in eu-west-1; the certificate is in us-east-1 as CloudFront requires. make deploy builds and deploys it.'),
       t('网站文件由堆栈本身上传（BucketDeployment），所以一次部署会同时更新页面和基础设施。', 'The site’s files are uploaded by the stack itself (BucketDeployment), so a deploy updates pages and infrastructure together.'),
-      t('Entra ID 和客户端密钥用 make set-secrets 输入一次，保存在 Parameter Store 中，而不是代码库里。', 'The Entra IDs and client secret are entered once with make set-secrets and stored in Parameter Store, not in the repository.'),
+      t('客户端 ID 和密钥用 make set-secrets 输入一次，保存在 Parameter Store 中，而不是代码库里。租户 ID 和共享 dliu API 的 ID 只保存一份，在 /dliu/entra-tenant-id 和 /dliu/api-app-id（dliu-com/audit），Lambda 只能读取这两个共享参数。', 'The client ID and secret are entered once with make set-secrets and stored in Parameter Store, not in the repository. The tenant ID and shared dliu API ID are kept once, in /dliu/entra-tenant-id and /dliu/api-app-id (dliu-com/audit); the Lambda can read only those two shared parameters.'),
       t('单元测试（Jest）覆盖：使用模拟 S3 的 API、与 AWS SDK 签名器对照的预签名网址、页面函数和合成的堆栈。make smoke 在线上网站上传、播放、编辑、嵌入并删除一个测试视频。', 'Unit tests (Jest) cover the API with a fake S3, the presigned URLs against the AWS SDK signer, the pages function and the synthesised stack. make smoke uploads, plays, edits, embeds and deletes a test video on the live site.'),
       t('访问量由中央流量监控（traffic.dliu.com）根据 CloudFront 日志统计；本站不运行任何统计代码。', 'Visits are counted by the central traffic monitor (traffic.dliu.com) from CloudFront’s logs; this site runs no analytics code.'),
     ])));

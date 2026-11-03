@@ -19,7 +19,7 @@ const param = (name) => execFileSync('aws', ['ssm', 'get-parameter', '--region',
 const apiClient = microsoft ? require('./api-client').createClient(require('./api-client').readConfig()) : null;
 let cookie;
 if (!microsoft) {
-  const config = { tenantId: param('entra-tenant-id'), clientId: param('entra-client-id'), clientSecret: param('entra-client-secret') };
+  const config = { clientSecret: param('entra-client-secret') };
   const session = auth.sign({ typ: 'session', user: `smoke-test@${new URL(SITE).hostname}`, name: 'Smoke test', exp: Math.floor(Date.now() / 1000) + 600 }, auth.sessionKey(config));
   cookie = `${auth.SESSION_COOKIE}=${session}`;
 }

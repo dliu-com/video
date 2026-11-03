@@ -175,3 +175,27 @@ test('every log group the stack manages is kept for 3 months', () => {
   for (const group of groups) expect(group.Properties.RetentionInDays).toBe(90);
   template.resourceCountIs('Custom::LogRetention', 0);
 });
+
+test('tenant and dliu API IDs come only from the shared /dliu/ parameters, and the Lambda can read exactly those two', () => {
+  const enabled = Template.fromStack(new VideoStack(new App(), 'VideoShared', {
+    subdomain: 'video', embedAncestors: ['https://dliu.com'], maxUploadBytes: 50 * 1024 ** 3,
+    microsoftApi: true, env: { account: '123456789012', region: 'eu-west-1' },
+  }));
+  const parameters = Object.values(enabled.toJSON().Parameters || {}).map((p: any) => p.Default);
+  expect(parameters.filter((name: string) => name.startsWith('/dliu/')).sort()).toEqual(['/dliu/api-app-id', '/dliu/entra-tenant-id']);
+  expect(parameters.filter((name: string) => /^\/video\/(api-|entra-tenant)/.test(name))).toEqual([]);
+  enabled.hasResourceProperties('AWS::Lambda::Function', Match.objectLike({
+    Handler: 'index.handler',
+    Environment: { Variables: Match.objectLike({ TENANT_PARAMETER: '/dliu/entra-tenant-id' }) },
+  }));
+  const statements = Object.values(enabled.findResources('AWS::IAM::Policy'))
+    .flatMap((policy: any) => policy.Properties.PolicyDocument.Statement);
+  const shared = statements.filter((s: any) => JSON.stringify(s.Resource).includes(':parameter/dliu/'));
+  expect(shared).toHaveLength(1);
+  expect(shared[0].Action).toBe('ssm:GetParameters');
+  const arns = shared[0].Resource.map((r: any) => JSON.stringify(r));
+  expect(arns).toHaveLength(2);
+  expect(arns.some((a: string) => a.includes(':parameter/dliu/entra-tenant-id'))).toBe(true);
+  expect(arns.some((a: string) => a.includes(':parameter/dliu/api-app-id'))).toBe(true);
+  expect(arns.some((a: string) => a.includes('*'))).toBe(false);
+});
