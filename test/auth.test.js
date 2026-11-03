@@ -58,7 +58,7 @@ function beginLogin() {
   const login = auth.startLogin(config, SITE, NOW);
   const url = new URL(login.location);
   const transient = cookieValue(login.cookies, auth.AUTH_COOKIE);
-  const payload = auth.verifySigned(transient, auth.sessionKey(config), NOW);
+  const payload = auth.verifySigned(transient, auth.loginKey(config), NOW);
   return { url, transient, payload };
 }
 
@@ -79,6 +79,36 @@ describe('signed tokens', () => {
     expect(auth.verifySigned(token, key, NOW + 61000)).toBeNull();
     expect(auth.verifySigned(token, auth.sessionKey({ clientSecret: 'other' }), NOW)).toBeNull();
     expect(auth.verifySigned(undefined, key, NOW)).toBeNull();
+  });
+});
+
+describe('login and session cookies cannot be swapped', () => {
+  const withCookie = (name, value) => ({ cookies: [`${name}=${value}`] });
+
+  test('the login cookie anyone gets from /auth/login is not a session', () => {
+    const { transient, payload } = beginLogin();
+    expect(payload.typ).toBe('login');
+    expect(auth.getSession(withCookie(auth.SESSION_COOKIE, transient), config, NOW)).toBeNull();
+    // Even signed with the session key, a login payload is not a session.
+    const relabelled = auth.sign(payload, auth.sessionKey(config));
+    expect(auth.getSession(withCookie(auth.SESSION_COOKIE, relabelled), config, NOW)).toBeNull();
+  });
+
+  test('a session needs typ session and a user', () => {
+    const key = auth.sessionKey(config);
+    const exp = NOW / 1000 + 60;
+    expect(auth.getSession(withCookie(auth.SESSION_COOKIE, auth.sign({ exp }, key)), config, NOW)).toBeNull();
+    expect(auth.getSession(withCookie(auth.SESSION_COOKIE, auth.sign({ user: 'me@example.com', exp }, key)), config, NOW)).toBeNull();
+    expect(auth.getSession(withCookie(auth.SESSION_COOKIE, auth.sign({ typ: 'session', user: '', exp }, key)), config, NOW)).toBeNull();
+    expect(auth.getSession(withCookie(auth.SESSION_COOKIE, auth.sign({ typ: 'session', user: 1, exp }, key)), config, NOW)).toBeNull();
+    expect(auth.getSession(withCookie(auth.SESSION_COOKIE, auth.sign({ typ: 'session', user: 'me@example.com', exp }, key)), config, NOW).user)
+      .toBe('me@example.com');
+  });
+
+  test('a session cookie is not accepted as the login cookie', async () => {
+    const session = auth.sign({ typ: 'session', user: 'me@example.com', state: 's', nonce: 'n', verifier: 'v', exp: NOW / 1000 + 60 }, auth.loginKey(config));
+    const result = await auth.finishLogin({ queryStringParameters: { code: 'c', state: 's' }, ...withCookie(auth.AUTH_COOKIE, session) }, config, SITE, { now: NOW, fetchImpl: () => { throw new Error('no fetch'); } });
+    expect(result.status).toBe(400);
   });
 });
 

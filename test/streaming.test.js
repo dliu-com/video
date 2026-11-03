@@ -21,7 +21,7 @@ Object.assign(process.env, {
   CONVERT_DELAY_MINUTES: '120',
 });
 
-const session = auth.sign({ user: 'me@example.com', name: 'Me', exp: Math.floor(NOW / 1000) + 7 * 86400 }, auth.sessionKey(config));
+const session = auth.sign({ typ: 'session', user: 'me@example.com', name: 'Me', exp: Math.floor(NOW / 1000) + 7 * 86400 }, auth.sessionKey(config));
 
 // Records commands; `fail` makes the named command throw the given error once.
 function fakeClient(reply = () => ({})) {

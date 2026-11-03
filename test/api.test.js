@@ -15,7 +15,7 @@ process.env.AWS_ACCESS_KEY_ID = 'AKIDEXAMPLE';
 process.env.AWS_SECRET_ACCESS_KEY = 'secret';
 process.env.MAX_UPLOAD_BYTES = String(10 * 1024 ** 3);
 
-const session = auth.sign({ user: 'me@example.com', name: 'Me', exp: Math.floor(NOW / 1000) + 7 * 86400 }, auth.sessionKey(config));
+const session = auth.sign({ typ: 'session', user: 'me@example.com', name: 'Me', exp: Math.floor(NOW / 1000) + 7 * 86400 }, auth.sessionKey(config));
 
 function setup({ now = () => NOW } = {}) {
   const s3 = createFakeS3();

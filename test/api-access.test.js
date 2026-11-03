@@ -133,7 +133,7 @@ test('managed requests never load browser credentials or accept cookies as fallb
   const request = event('GET', '/api/me');
   expect(JSON.parse((await handler(request)).body).user).toBe('assigned-user');
   request.requestContext.authorizer.jwt.scopes = [];
-  request.cookies = [`${auth.SESSION_COOKIE}=${auth.sign({ user: 'owner@example.com', exp: NOW / 1000 + 300 }, auth.sessionKey(config))}`];
+  request.cookies = [`${auth.SESSION_COOKIE}=${auth.sign({ typ: 'session', user: 'owner@example.com', exp: NOW / 1000 + 300 }, auth.sessionKey(config))}`];
   const denied = await handler(request);
   expect(denied.statusCode).toBe(403);
   expect(denied.cookies).toBeUndefined();
@@ -204,7 +204,7 @@ test('HTTP API has no login or logout routes, and default Function URL context s
   request.rawPath = '/api/videos';
   request.headers = { 'x-jwt-claims': JSON.stringify(event().requestContext.authorizer.jwt.claims) };
   expect((await handler(request)).statusCode).toBe(401);
-  request.cookies = [`${auth.SESSION_COOKIE}=${auth.sign({ user: 'owner@example.com', exp: NOW / 1000 + 300 }, auth.sessionKey(config))}`];
+  request.cookies = [`${auth.SESSION_COOKIE}=${auth.sign({ typ: 'session', user: 'owner@example.com', exp: NOW / 1000 + 300 }, auth.sessionKey(config))}`];
   expect((await handler(request)).statusCode).toBe(200);
   request.rawPath = '/api/uploads';
   request.requestContext.http.method = 'POST';

@@ -20,7 +20,7 @@ const apiClient = microsoft ? require('./api-client').createClient(require('./ap
 let cookie;
 if (!microsoft) {
   const config = { tenantId: param('entra-tenant-id'), clientId: param('entra-client-id'), clientSecret: param('entra-client-secret') };
-  const session = auth.sign({ user: `smoke-test@${new URL(SITE).hostname}`, name: 'Smoke test', exp: Math.floor(Date.now() / 1000) + 600 }, auth.sessionKey(config));
+  const session = auth.sign({ typ: 'session', user: `smoke-test@${new URL(SITE).hostname}`, name: 'Smoke test', exp: Math.floor(Date.now() / 1000) + 600 }, auth.sessionKey(config));
   cookie = `${auth.SESSION_COOKIE}=${session}`;
 }
 
