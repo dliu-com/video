@@ -281,7 +281,7 @@ export class VideoStack extends Stack {
       this, 'TrafficGeo', Fn.importValue('TrafficGeoOriginRequestPolicyId'));
 
     const pagesFunction = new cloudfront.Function(this, 'PagesFunction', {
-      comment: 'Serves /watch, /upload, /docs, /docs/api and /embed/<id> from their .html files',
+      comment: 'Serves /watch, /upload, /docs, /docs/api, /docs/health and /embed/<id> from their .html files',
       runtime: cloudfront.FunctionRuntime.JS_2_0,
       code: cloudfront.FunctionCode.fromFile({ filePath: path.join(ROOT, 'functions/pages.js') }),
     });
@@ -338,6 +338,22 @@ export class VideoStack extends Stack {
       responseHeadersPolicy: pageHeaders,
     };
 
+    // status.dliu.com's /health: no origin request policy, so CloudFront forwards no cookies, Authorization
+    // header or query string; the empty cache key and 60 s TTL run the checks at most once a minute per edge.
+    const healthCache = new cloudfront.CachePolicy(this, 'HealthCache', {
+      comment: 'video.dliu.com /health: 60 s, keyed on nothing',
+      minTtl: Duration.seconds(0),
+      defaultTtl: Duration.seconds(60),
+      maxTtl: Duration.seconds(60),
+    });
+    const healthBehavior: cloudfront.BehaviorOptions = {
+      origin: apiBehavior.origin,
+      allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+      viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+      cachePolicy: healthCache,
+      responseHeadersPolicy: pageHeaders,
+    };
+
     const distribution = new cloudfront.Distribution(this, 'Distribution', {
       comment: 'video.dliu.com',
       defaultBehavior: pageBehavior(pageHeaders),
@@ -349,6 +365,7 @@ export class VideoStack extends Stack {
         'data/*': { ...fileBehavior, cachePolicy: dataCache, compress: true },
         'api/*': { ...apiBehavior, allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL },
         'auth/*': apiBehavior,
+        'health': healthBehavior,
       },
       domainNames: [domainName],
       certificate,
@@ -387,8 +404,17 @@ export class VideoStack extends Stack {
       destinationBucket: siteBucket,
       // Browsers and CloudFront revalidate on every load (a 304 when unchanged), so a deploy shows up at once.
       cacheControl: [s3deploy.CacheControl.noCache()],
-      // vendor/ belongs to the deployment below; leave it alone when pruning.
-      exclude: ['vendor/*'],
+      // vendor/ and the Markdown docs belong to the deployments below; leave them alone when pruning.
+      exclude: ['vendor/*', '*.md'],
+    });
+    // Markdown docs for agents and status.dliu.com (/docs/api.md, /docs/health.md), with their charset.
+    new s3deploy.BucketDeployment(this, 'Markdown', {
+      sources: [s3deploy.Source.asset(path.join(ROOT, 'web'), { exclude: ['vendor'] })],
+      destinationBucket: siteBucket,
+      exclude: ['*'],
+      include: ['*.md'],
+      contentType: 'text/markdown; charset=utf-8',
+      cacheControl: [s3deploy.CacheControl.noCache()],
     });
     // Player libraries (Plyr, hls.js). Their file names carry the version, so they can be cached for a year.
     new s3deploy.BucketDeployment(this, 'PlayerLibraries', {

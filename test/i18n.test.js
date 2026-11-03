@@ -97,10 +97,10 @@ test('the switcher is the shared dl-language markup and saves the choice before 
 
 test('every page loads the language module, and the docs say the API reference is in English', () => {
   expect(read('web/common.js')).toMatch(/^import \{[^}]*\} from '\.\/i18n\.js';$/m);
-  for (const script of ['home', 'watch', 'upload', 'embed', 'docs', 'docs-api']) {
+  for (const script of ['home', 'watch', 'upload', 'embed', 'docs', 'docs-api', 'docs-health']) {
     expect(read(`web/${script}.js`)).toMatch(/from '\.\/common\.js'/);
   }
-  for (const html of ['index', 'watch', 'upload', 'docs', 'docs-api']) {
+  for (const html of ['index', 'watch', 'upload', 'docs', 'docs-api', 'docs-health']) {
     expect(read(`web/${html}.html`)).toContain('<span data-zh="DL 视频">DL video</span>');
   }
 });

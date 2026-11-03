@@ -6,6 +6,7 @@ const ROUTES = require('./routes.json');
 const { loadConfig, NotConfigured } = require('./config');
 const { BadRequest, NotFound, createVideos } = require('./videos');
 const { createStreaming } = require('./streaming');
+const { health } = require('./health');
 
 const SECURITY_HEADERS = { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' };
 const MAX_BODY = 64 * 1024;
@@ -85,6 +86,7 @@ function createHandler(deps = {}) {
   const getConfig = deps.loadConfig || loadConfig;
   const fetchImpl = deps.fetchImpl || ((...args) => fetch(...args));
   const clock = deps.now || Date.now;
+  const runHealth = deps.health || health;
 
   function services(context) {
     const s3 = deps.s3 || s3Client();
@@ -135,6 +137,10 @@ function createHandler(deps = {}) {
 
   return async function handler(event, lambdaContext) {
     if (event && !event.requestContext) return task(event, lambdaContext);
+    // status.dliu.com's anonymous check: answered before anything reads cookies, headers, query or body.
+    if (event.rawPath === '/health' && ['GET', 'HEAD'].includes(event.requestContext.http && event.requestContext.http.method)) {
+      return runHealth();
+    }
     const method = (event.requestContext && event.requestContext.http && event.requestContext.http.method) || 'GET';
     const path = event.rawPath || '/';
     const params = event.queryStringParameters || {};

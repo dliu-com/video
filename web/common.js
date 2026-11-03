@@ -107,7 +107,7 @@ export function renderNav() {
   nav.replaceChildren();
   const docs = el('a', { class: 'dl-button', href: '/docs' }, t('文档', 'Docs'));
   const page = location.pathname.replace(/\/$/, '');
-  if (page === '/docs' || page === '/docs/api') docs.setAttribute('aria-current', 'page');
+  if (page === '/docs' || page.startsWith('/docs/')) docs.setAttribute('aria-current', 'page');
   nav.append(docs);
   if (isOwner()) {
     nav.append(

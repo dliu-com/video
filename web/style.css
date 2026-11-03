@@ -123,3 +123,9 @@ body.embed .plyr { position: fixed; inset: 0; width: 100%; height: 100%; }
 /* The API reference is English only; Chinese pages say so. */
 html:not([lang^="zh"]) .api-language-note { display: none; }
 .dl-docs .risk-critical { color: #c62828; font-weight: 750; }
+.health-results { gap: 12px; }
+.health-functions li { margin-bottom: 8px; }
+.health-functions strong { display: block; }
+.health-doc .table-wrap { overflow-x: auto; }
+.health-doc th:not(:last-child), .health-doc td:not(:last-child) { white-space: nowrap; }
+.health-doc td:last-child { min-width: 14em; }

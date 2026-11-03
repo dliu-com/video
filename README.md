@@ -6,6 +6,9 @@ The docs at [video.dliu.com/docs](https://video.dliu.com/docs) cover the technic
 The dedicated [API reference](https://video.dliu.com/docs/api) documents the nine Microsoft-token routes,
 request/response fields and the direct-to-S3 multipart workflow. Agents can read the same source at
 [/docs/api.md](https://video.dliu.com/docs/api.md); its browser page renders that single Markdown source.
+[/docs/health](https://video.dliu.com/docs/health) explains, with a diagram, how [status.dliu.com](https://status.dliu.com)
+tests the site as an anonymous guest every 15 minutes; [/docs/health.md](https://video.dliu.com/docs/health.md) is the
+full technical version (every URL, status code and marker) for machines.
 
 ## How it works
 
@@ -58,8 +61,8 @@ When idle, the only cost is video storage. See [/docs#cost](https://video.dliu.c
 | --- | --- |
 | `lib/video-stack.ts` | The CDK stack |
 | `lambda/api/` | API and sign-in Lambda (`index.js` routes, `videos.js` upload/edit/delete, `streaming.js` MediaConvert conversion, `store.js` S3 data, `auth.js` Entra, `presign.js` SigV4) |
-| `functions/pages.js` | CloudFront Function for clean URLs (`/<id>`, `/embed/<id>`, `/upload`, `/docs`) |
-| `web/` | Static pages: home, watch, upload, embed, and docs (`i18n.js` Chinese / English) (`docs.js` content, `docs-api.html` and `docs-api.js` render `docs/api.md`, `diagram.js` diagram kit from traffic-monitor). `player.js` is the shared player |
+| `functions/pages.js` | CloudFront Function for clean URLs (`/<id>`, `/embed/<id>`, `/upload`, `/docs`, `/docs/api`, `/docs/health`) |
+| `web/` | Static pages: home, watch, upload, embed, and docs (`i18n.js` Chinese / English) (`docs.js` content, `docs-api.html` and `docs-api.js` render `docs/api.md`, `diagram.js` diagram kit from traffic-monitor, `docs-health.html` the health-check page for people, `docs/health.md` its technical version). `player.js` is the shared player |
 | `web/vendor/` | Plyr and hls.js with their version in the file names, copied from `node_modules` by `make vendor` (`scripts/vendor.js`) and committed |
 | `config/site.json` | Subdomain, sites allowed to embed, upload size cap |
 | `scripts/set-secrets.sh` | Stores the Entra app credentials in SSM |
@@ -254,6 +257,23 @@ make pentest  # live security tests against the deployed site
 `make pentest` (`scripts/pentest.sh`) runs about 136 curl/openssl checks against https://video.dliu.com: every route without, with forged and with unsigned sessions, the managed API with bad tokens, the OIDC sign-in, traversal, hidden files, XSS, cache deception, CORS, TLS and headers. With AWS credentials it also checks the Lambda URL and `*.cloudfront.net` directly, the concurrency cap and throttle, and presigned poster URLs (wrong type, expired). It prints a Markdown table and exits non-zero on any failure. The results and the threat model are on the Security tab of `/docs`.
 
 `make smoke` (`scripts/smoke-test.js`) uploads a throwaway 20 MiB video in two parts straight to S3. It then checks CORS, publishing, byte-range serving, the poster, the catalog, the embed headers and editing, and deletes the video. It signs a 10-minute owner session with the key derived from the client secret in SSM, so it needs AWS credentials that can read `/video/*`. Use `node scripts/smoke-test.js --keep` to leave the video in place for a look in the browser.
+
+## Health checks
+
+[status.dliu.com](https://status.dliu.com) checks the site every 15 minutes as an anonymous guest, following the
+dliu.com health contract (dliu-com/status `HEALTH.md`):
+
+- **Guest checks**: public GET/HEAD requests with an expected status, content type and marker, listed in
+  `web/docs/health.md` (pages, the video list, the watch and embed players, the sign-in redirect, and the two API locks
+  answering 401).
+- **`GET /health`** (`lambda/api/health.js`): no sign-in, read only. One S3 `HeadObject` of `data/catalog.json` and the
+  sign-in settings from SSM (already cached 5 minutes). It answers `application/health+json`, 200 for pass/warn and 503
+  for fail, with `output` limited to `slow`, `timeout` or `read failed`. The CloudFront `health` behavior forwards no
+  cookies, headers or query string and caches the reply for 60 s, and the handler answers before it reads any request
+  data.
+- `/docs/health` (people, with a diagram and the details folded) and `/docs/health.md` (machines, served as
+  `text/markdown; charset=utf-8`) must stay in sync; `test/health.test.js` fails if the keys, rows or JSON drift apart,
+  if the diagram or folds go, or if `/health` starts reading request data.
 
 ## Traffic monitoring
 

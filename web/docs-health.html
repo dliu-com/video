@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title data-zh="健康检查 · 文档 · DL 视频 · dliu.com">Health checks · Docs · DL video · dliu.com</title>
+  <meta name="description" content="How status.dliu.com tests video.dliu.com as a guest, and what each check means">
+  <link rel="icon" href="/logo.svg" type="image/svg+xml">
+  <link rel="alternate" type="text/markdown" href="/docs/health.md" title="Health checks (Markdown)">
+  <link rel="stylesheet" href="https://files.dliu.com/dliu.com/ui/v1/dl.css">
+  <link rel="stylesheet" href="https://files.dliu.com/dliu.com/ui/v1/dl-docs.css">
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/docs-health.js"></script>
+</head>
+<body class="dl-page">
+  <header class="dl-header">
+    <a class="dl-brand" href="/"><img class="dl-logo" src="/logo.svg" alt="" width="32" height="32"><span data-zh="DL 视频">DL video</span></a>
+    <nav class="dl-nav" aria-label="Site" data-zh-label="网站"></nav>
+  </header>
+  <main class="dl-main dl-docs-main">
+    <nav class="dl-tabs" aria-label="Docs sections" data-zh-label="文档章节">
+      <a href="/docs#architecture" data-zh="技术架构">Technical architecture</a>
+      <a href="/docs#cost" data-zh="运行成本">Cost</a>
+      <a href="/docs#security" data-zh="安全">Security</a>
+      <a href="/docs/api">API</a>
+      <a href="/docs/health" aria-current="page" data-zh="健康检查">Health checks</a>
+    </nav>
+    <article class="dl-docs health-doc" id="health" data-path="/docs/health">
+      <h2 data-zh="这个网站如何被测试">How this site is tested</h2>
+      <p class="lead" data-zh="每 15 分钟，status.dliu.com 会像一位没有登录的普通访客一样访问本站：打开公开的页面，确认上锁的地方仍然上锁，再请网站自己检查一下视频列表和登录设置。它从不登录，也不会改动任何内容。">Every 15 minutes, status.dliu.com visits this site like an ordinary visitor who isn't signed in. It opens the public pages, makes sure the locked doors are still locked, and asks the site to check its video list and sign-in settings. It never signs in and never changes anything.</p>
+
+      <figure class="dg">
+        <figcaption data-zh="一次检查的过程">One round of checks</figcaption>
+        <div class="dg-flow" role="list">
+          <div class="dg-step" role="listitem"><span class="dg-num">1</span><span class="dg-text"><strong data-zh="状态检查器">Status checker</strong><small data-zh="status.dliu.com，每 15 分钟一次，从不登录">status.dliu.com, every 15 minutes, never signed in</small></span></div>
+          <span class="dg-arrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span>
+          <div class="dg-step" role="listitem"><span class="dg-num">2</span><span class="dg-text"><strong data-zh="公开页面">Public pages</strong><small data-zh="首页、文档、观看页、嵌入播放器和视频列表都能打开">Home, docs, watch page, embed player and video list open</small></span></div>
+          <span class="dg-arrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span>
+          <div class="dg-step" role="listitem"><span class="dg-num">3</span><span class="dg-text"><strong data-zh="上锁的门">Locked doors</strong><small data-zh="登录转到 Microsoft；上传、编辑、删除都拒绝访客">Sign-in goes to Microsoft; uploads, edits and deletes refuse guests</small></span></div>
+          <span class="dg-arrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span>
+          <div class="dg-step" role="listitem"><span class="dg-num">4</span><span class="dg-text"><strong data-zh="网站自检">Site self-check</strong><small data-zh="网站读取一次视频列表和登录设置">The site reads its video list and sign-in settings once</small></span></div>
+        </div>
+      </figure>
+
+      <figure class="dg">
+        <figcaption data-zh="结果的含义">What the results mean</figcaption>
+        <div class="dg-flow health-results" role="list">
+          <div class="dg-step dg-good" role="listitem"><span class="dg-text"><strong data-zh="正常">Up</strong><small data-zh="每项检查都得到了预期的回答">Every check got the answer it expected</small></span></div>
+          <div class="dg-step dg-warn" role="listitem"><span class="dg-text"><strong data-zh="缓慢">Slow</strong><small data-zh="回答正确，但比平时慢">The answers were right, but slower than usual</small></span></div>
+          <div class="dg-step dg-bad" role="listitem"><span class="dg-text"><strong data-zh="故障">Down</strong><small data-zh="回答错误、出错，或者没有回应">A wrong answer, an error, or no reply</small></span></div>
+        </div>
+      </figure>
+
+      <h3 data-zh="检查哪些功能">What is checked</h3>
+      <ul class="health-functions">
+        <li data-function="pages"><strong data-zh="页面">Pages</strong> <span data-zh="首页和文档能打开。故障时，访客看到的是错误页而不是网站。">The home page and these docs open. If down, visitors get an error page instead of the site.</span></li>
+        <li data-function="catalog"><strong data-zh="视频列表和存储">Video list and storage</strong> <span data-zh="公开的视频列表能读取。故障时，首页是空的，视频也打不开。">The public list of videos can be read. If down, the home page is empty and videos don't open.</span></li>
+        <li data-function="player"><strong data-zh="播放器和嵌入">Player and embeds</strong> <span data-zh="观看页、其他网站（比如博客）使用的嵌入播放器和播放器程序都能打开。故障时，视频在本站和博客里都无法播放。">The watch page, the embed player that other sites such as the blog use, and the player program open. If down, videos don't play here or in the blog.</span></li>
+        <li data-function="signin"><strong data-zh="Microsoft 登录">Microsoft sign-in</strong> <span data-zh="登录按钮会转到 Microsoft，网站能读到登录设置。故障时，管理员无法登录；观看不受影响。">The sign-in button goes to Microsoft and the site can read its sign-in settings. If down, the owner can't sign in; watching still works.</span></li>
+        <li data-function="owner"><strong data-zh="管理员接口的门锁">Owner tools lock</strong> <span data-zh="网站上的上传、编辑和删除都拒绝没有登录的人。如果它对访客开放，就会被报告为故障。">Uploads, edits and deletes on the website refuse anyone who isn't signed in. If it ever lets a guest in, it is reported as down.</span></li>
+        <li data-function="msapi"><strong data-zh="工具接口的门锁">Tools API lock</strong> <span data-zh="供工具和 AI 助手使用的接口拒绝没有 Microsoft 令牌的请求。如果它对访客开放，就会被报告为故障。">The API for tools and AI agents refuses requests without a Microsoft token. If it ever lets a guest in, it is reported as down.</span></li>
+      </ul>
+
+      <details class="dg-more">
+        <summary data-zh="技术细节：访客检查">Technical details: guest checks</summary>
+        <div>
+          <p data-zh="每项检查只用 GET 或 HEAD；不发送 Cookie、Authorization 请求头或查询字符串；不跟随重定向；用户代理 dliu-status-bot/1.0 (+https://status.dliu.com/docs)；超时 10 秒。内容类型按前缀匹配。">Every check uses GET or HEAD only; sends no cookies, no Authorization header and no query string; does not follow redirects; uses the user agent dliu-status-bot/1.0 (+https://status.dliu.com/docs); and times out after 10 s. Match content types by prefix.</p>
+          <div class="table-wrap"><table>
+            <thead><tr><th data-zh="功能">Function</th><th data-zh="方法">Method</th><th>URL</th><th data-zh="状态码">Status</th><th data-zh="内容类型">Content type</th><th data-zh="正文标记、JSON 键或 Location 前缀">Body marker, JSON key or Location prefix</th><th data-zh="超过即为缓慢">Slow after</th></tr></thead>
+            <tbody>
+              <tr><td><code>pages</code></td><td>GET</td><td>https://video.dliu.com/</td><td>200</td><td><code>text/html</code></td><td>contains <code>class=&quot;dl-header&quot;</code></td><td>2000 ms</td></tr>
+              <tr><td><code>pages</code></td><td>GET</td><td>https://video.dliu.com/docs</td><td>200</td><td><code>text/html</code></td><td>contains <code>class=&quot;dl-tabs&quot;</code></td><td>2000 ms</td></tr>
+              <tr><td><code>catalog</code></td><td>GET</td><td>https://video.dliu.com/data/catalog.json</td><td>200</td><td><code>application/json</code></td><td>JSON key <code>videos</code></td><td>2000 ms</td></tr>
+              <tr><td><code>player</code></td><td>GET</td><td>https://video.dliu.com/2000010100</td><td>200</td><td><code>text/html</code></td><td>contains <code>id=&quot;download&quot;</code></td><td>2000 ms</td></tr>
+              <tr><td><code>player</code></td><td>GET</td><td>https://video.dliu.com/embed/2000010100</td><td>200</td><td><code>text/html</code></td><td>contains <code>id=&quot;player&quot;</code></td><td>2000 ms</td></tr>
+              <tr><td><code>player</code></td><td>HEAD</td><td>https://video.dliu.com/player.js</td><td>200</td><td><code>text/javascript</code></td><td>—</td><td>2000 ms</td></tr>
+              <tr><td><code>signin</code></td><td>GET</td><td>https://video.dliu.com/auth/login</td><td>302</td><td>—</td><td><code>Location</code> starts with <code>https://login.microsoftonline.com/</code></td><td>3000 ms</td></tr>
+              <tr><td><code>owner</code></td><td>GET</td><td>https://video.dliu.com/api/me</td><td>401</td><td><code>application/json</code></td><td>JSON key <code>error</code></td><td>3000 ms</td></tr>
+              <tr><td><code>msapi</code></td><td>GET</td><td>https://hdauj691e9.execute-api.eu-west-1.amazonaws.com/api/me</td><td>401</td><td><code>application/json</code></td><td>JSON key <code>message</code></td><td>3000 ms</td></tr>
+            </tbody>
+          </table></div>
+          <p data-zh="2000010100 是一个永远不会有视频的占位编号：观看页和嵌入页照样打开，然后显示找不到视频，所以检查不受视频增删的影响。/api/me 和工具接口必须返回 401；返回 200 就说明门锁坏了，应报告为故障。">2000010100 is a placeholder ID that never holds a video: the watch and embed pages still open and then say the video isn't found, so the checks don't depend on which videos exist. /api/me and the tools API must answer 401; a 200 means the lock is broken and is reported as down.</p>
+        </div>
+      </details>
+
+      <details class="dg-more">
+        <summary data-zh="技术细节：/health 自检">Technical details: the /health self-check</summary>
+        <div>
+          <p data-zh="GET https://video.dliu.com/health（也可用 HEAD）。无需登录：CloudFront 不转发 Cookie、Authorization 请求头或查询字符串，Lambda 也不读取任何请求内容。CloudFront 缓存 60 秒。每项检查最多 2 秒，超过 1 秒为 warn。返回 application/health+json：pass 或 warn 时为 200，fail 时为 503；output 只会是 slow、timeout 或 read failed。">GET https://video.dliu.com/health (HEAD also works). No sign-in: CloudFront forwards no cookies, Authorization header or query string, and the Lambda reads no request data. Cached at CloudFront for 60 s. Each check has 2 s; over 1 s is warn. It answers application/health+json: 200 for pass or warn, 503 for fail; output is only slow, timeout or read failed.</p>
+          <pre class="code">{
+  "status": "pass",
+  "time": "2026-11-04T09:00:00Z",
+  "functions": [
+    { "key": "catalog", "name": "Video list and storage", "status": "pass" },
+    { "key": "signin", "name": "Microsoft sign-in settings", "status": "pass" }
+  ]
+}</pre>
+          <div class="table-wrap"><table>
+            <thead><tr><th data-zh="功能键">Function key</th><th data-zh="检查读取的内容">What the check reads</th></tr></thead>
+            <tbody>
+              <tr><td><code>catalog</code></td><td>One S3 <code>HeadObject</code> of <code>data/catalog.json</code> in the video bucket (no LIST, no download).</td></tr>
+              <tr><td><code>signin</code></td><td>The sign-in settings the app already loads from SSM Parameter Store (cached 5 minutes). Microsoft is not called.</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </details>
+
+      <h3 data-zh="测不到的部分">What isn't tested</h3>
+      <ul>
+        <li data-zh="在 Microsoft 登录并获得会话">Signing in at Microsoft and getting a session</li>
+        <li data-zh="上传、替换、编辑和删除视频与封面">Uploading, replacing, editing and deleting videos and posters</li>
+        <li data-zh="把上传的视频转换成流媒体版本">Converting uploads into streaming versions</li>
+        <li data-zh="用真实的 Microsoft 令牌调用工具接口">Using the tools API with a real Microsoft token</li>
+        <li data-zh="播放某一个具体的视频，因为现有哪些视频会变化">Playing a particular video, because which videos exist changes</li>
+      </ul>
+
+      <p class="source"><a href="/docs/health.md" data-zh="完整技术版本（Markdown）">Full technical version (Markdown)</a> <span data-zh="（英文，供机器和 AI 助手阅读，包含全部细节）">(English, for machines and AI agents, with every detail)</span></p>
+    </article>
+  </main>
+  <footer class="dl-footer">
+    <a class="dl-footer-logo" href="https://dliu.com" aria-label="dliu.com"><img src="https://files.dliu.com/dliu.com/favicon.png" alt="" width="24" height="24"></a>
+    <a href="https://dliu.com">dliu.com</a> · <a href="/docs" data-zh="文档">Docs</a>
+  </footer>
+</body>
+</html>

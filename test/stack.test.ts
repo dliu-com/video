@@ -39,7 +39,7 @@ test('video bucket accepts browser uploads from the site and cleans up abandoned
 
 test('routes files, data and the API to the right origins', () => {
   expect(distributionConfig().CacheBehaviors.map((b: { PathPattern: string }) => b.PathPattern))
-    .toEqual(['embed/*', 'v/*', 't/*', 'h/*', 'data/*', 'api/*', 'auth/*']);
+    .toEqual(['embed/*', 'v/*', 't/*', 'h/*', 'data/*', 'api/*', 'auth/*', 'health']);
   expect(behavior('api/*').AllowedMethods).toContain('POST');
   expect(behavior('auth/*').AllowedMethods).not.toContain('POST');
   expect(behavior('v/*').Compress).toBe(false);
@@ -124,9 +124,31 @@ test('serves from every edge location over HTTP/2 and HTTP/3; HTML and catalog s
   // Pages revalidate; the versioned player libraries are cached for a year.
   expect(deployments.map((d: any) => [d.Properties.DestinationBucketKeyPrefix, d.Properties.SystemMetadata])).toEqual([
     [undefined, { 'cache-control': 'no-cache' }],
+    [undefined, { 'cache-control': 'no-cache', 'content-type': 'text/markdown; charset=utf-8' }],
     ['vendor/', { 'cache-control': 'public, max-age=31536000, immutable' }],
   ]);
-  expect((deployments[0] as any).Properties.Exclude).toEqual(['vendor/*']);
+  // The Markdown docs are deployed only by the Markdown deployment, with their charset.
+  expect((deployments[0] as any).Properties.Exclude).toEqual(['vendor/*', '*.md']);
+  expect((deployments[1] as any).Properties).toMatchObject({ Exclude: ['*'], Include: ['*.md'] });
+});
+
+test('/health for status.dliu.com: the Lambda, no forwarded request data, cached 60 s on an empty key', () => {
+  const health = behavior('health');
+  expect(health.AllowedMethods).toEqual(['GET', 'HEAD']);
+  expect(health.TargetOriginId).toBe(behavior('auth/*').TargetOriginId);
+  expect(health.OriginRequestPolicyId).toBeUndefined();
+  expect(health.FunctionAssociations).toBeUndefined();
+  const policies = template.findResources('AWS::CloudFront::CachePolicy');
+  const [id] = Object.entries(policies).find(([key]) => key.startsWith('HealthCache'))!;
+  expect(health.CachePolicyId).toEqual({ Ref: id });
+  expect(policies[id].Properties.CachePolicyConfig).toMatchObject({
+    MinTTL: 0, DefaultTTL: 60, MaxTTL: 60,
+    ParametersInCacheKeyAndForwardedToOrigin: {
+      CookiesConfig: { CookieBehavior: 'none' },
+      HeadersConfig: { HeaderBehavior: 'none' },
+      QueryStringsConfig: { QueryStringBehavior: 'none' },
+    },
+  });
 });
 
 test('streaming versions: MediaConvert after a delay, finished jobs reported back, cached for a year', () => {
