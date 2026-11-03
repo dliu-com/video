@@ -3,6 +3,8 @@
 // Both libraries are self-hosted (web/vendor/, see scripts/vendor.js) and loaded only when a video is shown.
 // If they cannot load, the browser's own controls play the original file.
 
+import { lang, t } from './i18n.js';
+
 const PLYR = '3.8.5';
 const HLS = '1.7.4';
 const VENDOR = '/vendor';
@@ -10,6 +12,17 @@ const VENDOR = '/vendor';
 // How far ahead hls.js downloads: enough to ride out a slow network, without fetching the whole video
 // for someone who stops watching (the same in every browser, unlike the original file).
 const BUFFER = { maxBufferLength: 30, maxMaxBufferLength: 60, backBufferLength: 30 };
+
+// Plyr's own labels in Chinese (its defaults are English).
+const ZH = {
+  restart: '重新播放', rewind: '后退 {seektime} 秒', play: '播放', pause: '暂停', fastForward: '快进 {seektime} 秒',
+  seek: '跳转', seekLabel: '{currentTime} / {duration}', played: '已播放', buffered: '已缓冲',
+  currentTime: '当前时间', duration: '时长', volume: '音量', mute: '静音', unmute: '取消静音',
+  enableCaptions: '打开字幕', disableCaptions: '关闭字幕', download: '下载',
+  enterFullscreen: '全屏', exitFullscreen: '退出全屏', frameTitle: '{title} 的播放器', captions: '字幕',
+  settings: '设置', pip: '画中画', menuBack: '返回上一级菜单', speed: '速度', normal: '正常', quality: '画质',
+  loop: '循环', start: '开始', end: '结束', all: '全部', reset: '重置', disabled: '关闭', enabled: '开启',
+};
 
 const shortSide = (level) => Math.min(level.width || 0, level.height || 0) || level.height || 0;
 
@@ -114,7 +127,7 @@ export async function createPlayer(media, video, { start = 0, autoplay = false, 
 
   const autoLabel = (level) => {
     const height = level >= 0 && streaming.hls.levels[level] ? shortSide(streaming.hls.levels[level]) : 0;
-    return height ? `Auto (${height}p)` : 'Auto';
+    return height ? `${t('自动', 'Auto')} (${height}p)` : t('自动', 'Auto');
   };
   // Shows the level Auto is playing, in the quality list and on the main menu.
   const showAutoLevel = (level) => {
@@ -140,7 +153,7 @@ export async function createPlayer(media, video, { start = 0, autoplay = false, 
     autoplay,
     muted: media.muted,
     loop: { active: loop },
-    i18n: { qualityLabel: { 0: 'Auto' } },
+    i18n: { ...(lang === 'zh' ? ZH : {}), qualityLabel: { 0: t('自动', 'Auto') } },
   };
   if (heights.length > 1) {
     options.quality = {
@@ -186,7 +199,7 @@ export async function createPlayer(media, video, { start = 0, autoplay = false, 
     const list = plyr.elements.settings?.panels?.home?.querySelector('[role="menu"]');
     if (!list) return;
     const close = () => plyr.elements.buttons.settings?.click();
-    const download = menuItem('a', 'Download', { href: video.src, download: fileName(video) });
+    const download = menuItem('a', t('下载', 'Download'), { href: video.src, download: fileName(video) });
     download.addEventListener('click', close);
     list.append(download);
   });

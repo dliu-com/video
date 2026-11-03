@@ -1,4 +1,4 @@
-import { ApiError, api, el, formatDate, formatDuration, getData, isOwner, renderNav } from './common.js';
+import { ApiError, api, el, formatDate, formatDuration, getData, isOwner, renderNav, t } from './common.js';
 
 function card(video) {
   return el('a', { class: 'card', href: `/${encodeURIComponent(video.id)}` },
@@ -16,7 +16,7 @@ async function load() {
     // The API reads the index directly, so the owner sees new uploads without waiting for the catalog cache.
     try {
       videos = (await api('/api/videos')).videos;
-      document.getElementById('heading').textContent = 'All videos';
+      document.getElementById('heading').textContent = t('全部视频', 'All videos');
     } catch (error) {
       if (!(error instanceof ApiError && error.status === 401)) throw error;
       renderNav();
@@ -26,10 +26,13 @@ async function load() {
 
   const grid = document.getElementById('grid');
   grid.replaceChildren(...videos.map(card));
-  document.getElementById('count').textContent = videos.length ? `${videos.length} video${videos.length === 1 ? '' : 's'}` : '';
+  document.getElementById('count').textContent = videos.length
+    ? t(`${videos.length} 个视频`, `${videos.length} video${videos.length === 1 ? '' : 's'}`) : '';
   status.hidden = videos.length > 0;
   status.className = 'empty';
-  status.replaceChildren(isOwner() ? el('span', {}, 'No videos yet. ', el('a', { href: '/upload' }, 'Upload one')) : 'No videos yet.');
+  status.replaceChildren(isOwner()
+    ? el('span', {}, t('还没有视频。', 'No videos yet. '), el('a', { href: '/upload' }, t('上传一个', 'Upload one')))
+    : t('还没有视频。', 'No videos yet.'));
 }
 
 renderNav();

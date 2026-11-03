@@ -1,4 +1,5 @@
-import { api, captureFrame, formatDuration, formatSize, getData, isOwner, putBlob, renderNav, signInUrl } from './common.js';
+import { api, captureFrame, formatDuration, formatSize, getData, isOwner, putBlob, renderNav, signInUrl, t } from './common.js';
+import { translateError } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
 const CONCURRENCY = 4;
@@ -47,13 +48,14 @@ async function probe(f) {
       ]);
       posterBlob = await captureFrame(video);
       $('poster').src = URL.createObjectURL(posterBlob);
-      $('poster-note').textContent = 'Thumbnail from 1 second in. You can pick another frame on the video page later.';
+      $('poster-note').textContent = t('缩略图取自第 1 秒。之后可以在视频页面选择其他画面。', 'Thumbnail from 1 second in. You can pick another frame on the video page later.');
       $('new-poster-box').hidden = !replaceId;
     } else {
-      $('poster-note').textContent = 'Audio only: no thumbnail.';
+      $('poster-note').textContent = t('只有音频：没有缩略图。', 'Audio only: no thumbnail.');
     }
   } catch {
-    $('poster-note').textContent = 'This browser cannot play this file, so viewers may not be able to either. Consider converting it to MP4 (H.264/AAC).';
+    $('poster-note').textContent = t('这个浏览器无法播放此文件，观众可能也无法播放。建议先转换成 MP4（H.264/AAC）。',
+      'This browser cannot play this file, so viewers may not be able to either. Consider converting it to MP4 (H.264/AAC).');
   } finally {
     video.removeAttribute('src');
     video.load();
@@ -64,7 +66,7 @@ async function probe(f) {
 async function choose(f) {
   if (!f) return;
   if (!contentTypeOf(f)) {
-    setStatus('Unsupported file type. Use MP4, M4V, MOV, WebM or OGV.', 'error');
+    setStatus(t('不支持的文件类型。请使用 MP4、M4V、MOV、WebM 或 OGV。', 'Unsupported file type. Use MP4, M4V, MOV, WebM or OGV.'), 'error');
     return;
   }
   file = f;
@@ -72,7 +74,7 @@ async function choose(f) {
   $('details').hidden = false;
   if (!replaceId && !$('title').value) $('title').value = f.name.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ');
   $('file-info').textContent = `${f.name} · ${formatSize(f.size)}`;
-  $('poster-note').textContent = 'Reading the video…';
+  $('poster-note').textContent = t('正在读取视频…', 'Reading the video…');
   await probe(f);
   if (meta.duration) $('file-info').textContent = `${f.name} · ${formatSize(f.size)} · ${formatDuration(meta.duration)}${meta.width ? ` · ${meta.width}×${meta.height}` : ''}`;
 }
@@ -85,10 +87,10 @@ function putPart(url, blob, onProgress) {
     xhr.onload = () => {
       const etag = xhr.getResponseHeader('ETag');
       if (xhr.status >= 200 && xhr.status < 300 && etag) resolve(etag);
-      else reject(Object.assign(new Error(`Part upload failed (${xhr.status})`), { status: xhr.status }));
+      else reject(Object.assign(new Error(t(`分块上传失败（${xhr.status}）`, `Part upload failed (${xhr.status})`)), { status: xhr.status }));
     };
-    xhr.onerror = () => reject(new Error('Network error'));
-    xhr.onabort = () => reject(new Error('Cancelled'));
+    xhr.onerror = () => reject(new Error(t('网络错误', 'Network error')));
+    xhr.onabort = () => reject(new Error(t('已取消', 'Cancelled')));
     current.xhrs.add(xhr);
     xhr.onloadend = () => current && current.xhrs.delete(xhr);
     xhr.send(blob);
@@ -106,7 +108,9 @@ async function uploadParts(plan) {
     const speed = done / Math.max(seconds, 0.1);
     const left = speed > 0 ? (file.size - done) / speed : 0;
     $('bar').style.width = `${((done / file.size) * 100).toFixed(1)}%`;
-    $('progress-text').textContent = `${formatSize(done)} of ${formatSize(file.size)} · ${formatSize(speed)}/s · ${formatDuration(left) || '0:00'} left`;
+    $('progress-text').textContent = t(
+      `${formatSize(done)} / ${formatSize(file.size)} · ${formatSize(speed)}/秒 · 剩余 ${formatDuration(left) || '0:00'}`,
+      `${formatSize(done)} of ${formatSize(file.size)} · ${formatSize(speed)}/s · ${formatDuration(left) || '0:00'} left`);
   };
 
   let signing = null;
@@ -133,7 +137,7 @@ async function uploadParts(plan) {
       next += 1;
       const blob = file.slice((part - 1) * plan.partSize, Math.min(part * plan.partSize, file.size));
       for (let attempt = 1; ; attempt += 1) {
-        if (current.cancelled) throw new Error('Cancelled');
+        if (current.cancelled) throw new Error(t('已取消', 'Cancelled'));
         try {
           // A 403 usually means the signed URL expired, so sign it again.
           const etag = await putPart(await urlFor(part, attempt > 1), blob, (n) => { loaded[part] = n; report(); });
@@ -158,12 +162,12 @@ async function setupReplace() {
   $('fields').hidden = true;
   $('title').required = false;
   $('replace-note').hidden = false;
-  $('submit').textContent = 'Upload new version';
+  $('submit').textContent = t('上传新版本', 'Upload new version');
   $('form').hidden = true;
   const video = await getData(`/data/videos/${replaceId}.json`);
-  if (!video) throw new Error('Video not found. It may have been deleted.');
-  $('heading').textContent = `Replace “${video.title}”`;
-  document.title = `Replace · ${video.title} · dliu.com`;
+  if (!video) throw new Error(t('找不到视频，可能已被删除。', 'Video not found. It may have been deleted.'));
+  $('heading').textContent = t(`替换“${video.title}”`, `Replace “${video.title}”`);
+  document.title = `${t('替换', 'Replace')} · ${video.title} · dliu.com`;
   $('form').hidden = false;
 }
 
@@ -179,7 +183,7 @@ async function submit(event) {
   window.addEventListener('beforeunload', warnLeave);
   current = { cancelled: false, xhrs: new Set() };
   try {
-    setStatus('Starting…');
+    setStatus(t('正在开始…', 'Starting…'));
     const newPoster = Boolean(posterBlob) && (!replaceId || $('new-poster').checked);
     const plan = await api('/api/uploads', {
       ...(replaceId ? { replace: replaceId } : { title: $('title').value, description: $('description').value }),
@@ -192,9 +196,9 @@ async function submit(event) {
     });
     Object.assign(current, plan);
     if (plan.posterUrl && newPoster) await putBlob(plan.posterUrl, posterBlob, 'image/jpeg').catch(() => {});
-    setStatus('Uploading… keep this tab open.');
+    setStatus(t('正在上传…请不要关闭此页面。', 'Uploading… keep this tab open.'));
     const parts = await uploadParts(plan);
-    setStatus('Finishing…');
+    setStatus(t('正在完成…', 'Finishing…'));
     const { video } = await api('/api/uploads/complete', { id: plan.id, uploadId: plan.uploadId, parts });
     window.removeEventListener('beforeunload', warnLeave);
     location.href = `/${encodeURIComponent(video.id)}`;
@@ -202,7 +206,8 @@ async function submit(event) {
     const plan = current;
     if (plan && plan.uploadId) await api('/api/uploads/abort', { id: plan.id, uploadId: plan.uploadId }).catch(() => {});
     if (error.status === 401) location.href = signInUrl();
-    setStatus(plan && plan.cancelled ? 'Upload cancelled.' : `Upload failed: ${error.message}`, plan && plan.cancelled ? 'muted' : 'error');
+    setStatus(plan && plan.cancelled ? t('上传已取消。', 'Upload cancelled.')
+      : t(`上传失败：${translateError(error.message)}`, `Upload failed: ${error.message}`), plan && plan.cancelled ? 'muted' : 'error');
     $('progress-box').hidden = true;
   } finally {
     current = null;

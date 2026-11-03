@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Docs · Video · dliu.com</title>
+  <title data-zh="文档 · 视频 · dliu.com">Docs · Video · dliu.com</title>
   <meta name="description" content="How video.dliu.com works: architecture, running costs and security">
   <link rel="icon" href="/logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="https://files.dliu.com/dliu.com/ui/v1/dl.css">
@@ -13,33 +13,33 @@
 </head>
 <body class="dl-page">
   <header class="dl-header">
-    <a class="dl-brand" href="/"><img class="dl-logo" src="/logo.svg" alt="" width="32" height="32">Video</a>
-    <nav class="dl-nav" aria-label="Site"></nav>
+    <a class="dl-brand" href="/"><img class="dl-logo" src="/logo.svg" alt="" width="32" height="32"><span data-zh="视频">Video</span></a>
+    <nav class="dl-nav" aria-label="Site" data-zh-label="网站"></nav>
   </header>
   <main class="dl-main dl-docs-main">
-    <nav class="dl-tabs" aria-label="Docs sections">
-      <a href="#architecture" data-tab="architecture">Technical architecture</a>
-      <a href="#cost" data-tab="cost">Cost</a>
-      <a href="#security" data-tab="security">Security</a>
+    <nav class="dl-tabs" aria-label="Docs sections" data-zh-label="文档章节">
+      <a href="#architecture" data-tab="architecture" data-zh="技术架构">Technical architecture</a>
+      <a href="#cost" data-tab="cost" data-zh="运行成本">Cost</a>
+      <a href="#security" data-tab="security" data-zh="安全">Security</a>
       <a href="/docs/api">API</a>
     </nav>
     <article id="architecture" class="dl-docs">
-      <h2>How it works</h2>
-      <p class="lead">video.dliu.com hosts videos that anyone can watch and that other dliu.com sites can embed. There are no servers: files sit in S3, CloudFront delivers them, and one small Lambda function runs only when the owner signs in or changes a video.</p>
-      <noscript><p>The diagrams on this page need JavaScript.</p></noscript>
+      <h2 data-zh="工作原理">How it works</h2>
+      <p class="lead" data-zh="video.dliu.com 托管任何人都能观看、并能嵌入其他 dliu.com 网站的视频。这里没有服务器：文件存放在 S3，由 CloudFront 分发，只有在管理员登录或修改视频时（以及转换流媒体版本时）才会运行一个小小的 Lambda 函数。">video.dliu.com hosts videos that anyone can watch and that other dliu.com sites can embed. There are no servers: files sit in S3, CloudFront delivers them, and one small Lambda function runs only when the owner signs in or changes a video.</p>
+      <noscript><p>The diagrams on this page need JavaScript. 此页面的图示需要 JavaScript。</p></noscript>
     </article>
     <article id="cost" class="dl-docs" hidden>
-      <h2>Running costs</h2>
-      <p class="lead">Everything is billed per use. With nobody watching, the only charge is storing the videos in S3.</p>
+      <h2 data-zh="运行成本">Running costs</h2>
+      <p class="lead" data-zh="一切按用量计费。没人观看时，唯一的费用是在 S3 中存储视频。">Everything is billed per use. With nobody watching, the only charge is storing the videos in S3.</p>
     </article>
     <article id="security" class="dl-docs" hidden>
-      <h2>Security</h2>
-      <p class="lead">Anyone can watch; only the owner, signed in with Microsoft, can upload, edit or delete.</p>
+      <h2 data-zh="安全">Security</h2>
+      <p class="lead" data-zh="任何人都可以观看；只有用 Microsoft 账户登录的管理员才能上传、编辑或删除。">Anyone can watch; only the owner, signed in with Microsoft, can upload, edit or delete.</p>
     </article>
   </main>
   <footer class="dl-footer">
     <a class="dl-footer-logo" href="https://dliu.com" aria-label="dliu.com"><img src="https://files.dliu.com/dliu.com/favicon.png" alt="" width="24" height="24"></a>
-    <a href="https://dliu.com">dliu.com</a> · <a href="/">Video</a>
+    <a href="https://dliu.com">dliu.com</a> · <a href="/docs" data-zh="文档">Docs</a>
   </footer>
 </body>
 </html>

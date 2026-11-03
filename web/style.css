@@ -119,3 +119,6 @@ body.embed .plyr { position: fixed; inset: 0; width: 100%; height: 100%; }
 .player { container-type: size; }
 .plyr__menu__container > div { max-height: calc(100vh - 70px); overflow-y: auto; overscroll-behavior: contain; }
 .player .plyr__menu__container > div { max-height: calc(100cqh - 64px); }
+
+/* The API reference is English only; Chinese pages say so. */
+html:not([lang^="zh"]) .api-language-note { display: none; }

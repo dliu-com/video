@@ -18,9 +18,10 @@ test('every app page has the shared header with the video logo, and the shared f
     const page = read(`web/${html}.html`);
     expect(page).toContain('<link rel="icon" href="/logo.svg" type="image/svg+xml">');
     expect(page).toContain('<body class="dl-page">');
-    expect(page).toContain('<a class="dl-brand" href="/"><img class="dl-logo" src="/logo.svg" alt="" width="32" height="32">Video</a>');
+    expect(page).toContain('<a class="dl-brand" href="/"><img class="dl-logo" src="/logo.svg" alt="" width="32" height="32"><span data-zh="视频">Video</span></a>');
     expect(page).toMatch(/<main class="dl-main[" ]/);
     expect(page).toMatch(new RegExp(`<footer class="dl-footer">\\s*<a class="dl-footer-logo" href="https://dliu.com" aria-label="dliu.com"><img src="${DL_ICON}"`));
+    expect(page).toContain('<a href="https://dliu.com">dliu.com</a> · <a href="/docs" data-zh="文档">Docs</a>\n  </footer>');
   }
   expect(fs.existsSync(path.join(__dirname, '..', 'web/logo.svg'))).toBe(true);
 });
@@ -30,7 +31,7 @@ test('docs pages load the shared docs stylesheet and tabs, and the app has no do
     const page = read(`web/${html}.html`);
     expect(page).toContain('<link rel="stylesheet" href="https://files.dliu.com/dliu.com/ui/v1/dl-docs.css">');
     expect(page).toContain('<main class="dl-main dl-docs-main">');
-    expect(page).toContain('<nav class="dl-tabs" aria-label="Docs sections">');
+    expect(page).toContain('<nav class="dl-tabs" aria-label="Docs sections" data-zh-label="文档章节">');
     expect(page).not.toContain('/docs.css');
   }
   expect(fs.existsSync(path.join(__dirname, '..', 'web/docs.css'))).toBe(false);

@@ -1,5 +1,5 @@
 // The embeddable player: /embed/<id>?t=<seconds>&autoplay=1&muted=1&loop=1
-import { getData } from './common.js';
+import { getData, t } from './common.js';
 import { createPlayer } from './player.js';
 
 const id = location.pathname.split('/').pop() || '';
@@ -31,5 +31,5 @@ async function load() {
 }
 
 load().catch(() => {
-  message.textContent = 'This video is unavailable.';
+  message.textContent = t('此视频无法播放。', 'This video is unavailable.');
 });

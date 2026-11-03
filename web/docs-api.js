@@ -1,4 +1,4 @@
-import { el, renderNav } from './common.js';
+import { el, renderNav, t } from './common.js';
 
 function inline(node, text) {
   const pattern = /`([^`]+)`|\[([^\]]+)\]\(([^)\s]+)\)|\*\*([^*]+)\*\*/g;
@@ -76,7 +76,8 @@ export async function loadApiDocs(root) {
     root.replaceChildren(renderApiMarkdown(await response.text()));
   } catch (error) {
     root.replaceChildren(el('p', { class: 'dl-error', role: 'alert' },
-      `Could not load the API reference: ${error.message}. `, el('a', { href: '/docs/api.md' }, 'Read the Markdown directly')));
+      t(`无法加载 API 参考：${error.message}。`, `Could not load the API reference: ${error.message}. `),
+      el('a', { href: '/docs/api.md' }, t('直接阅读 Markdown', 'Read the Markdown directly'))));
   }
 }
 

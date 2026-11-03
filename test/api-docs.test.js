@@ -32,7 +32,7 @@ const el = (tag, attrs = {}, ...children) => {
 const walk = (node) => [node, ...node.children.filter((child) => child instanceof Element).flatMap(walk)];
 
 function renderer() {
-  const context = { el, renderNav: jest.fn(), document: { getElementById: () => null }, fetch: jest.fn() };
+  const context = { el, renderNav: jest.fn(), t: (zh, en) => en, document: { getElementById: () => null }, fetch: jest.fn() };
   vm.runInNewContext(read('web/docs-api.js').replace(/^import .*;$/gm, '').replace(/^export /gm, ''), context);
   return context;
 }
@@ -156,16 +156,21 @@ test('fetch and document-format failures are surfaced instead of leaving a loadi
   expect(root.textContent).toContain('Unclosed code block');
 });
 
+// common.js imports i18n.js; the VM gets English stand-ins instead.
+const SWITCHER = el('div');
+const I18N = { t: (zh, en) => en, locale: undefined, translateError: (m) => m, languageSwitcher: () => SWITCHER };
+const commonScript = () => read('web/common.js').replace(/^import .*;$/gm, '').replace(/^export \{[^}]*\};$/gm, '').replace(/^export /gm, '');
+
 test('API navigation is linked from docs, keeps the website header active and preserves sign-in return paths', () => {
   expect(read('web/docs.html')).toContain('<a href="/docs/api">API</a>');
   expect(read('web/docs-api.html')).toContain('<a href="/docs/api" aria-current="page">API</a>');
   expect(read('web/docs-api.html')).toContain('href="/docs/api.md"');
   for (const pathname of ['/docs', '/docs/api', '/docs/api/']) {
     const nav = el('nav');
-    const context = { Node: Element, location: { pathname, search: '' },
+    const context = { Node: Element, location: { pathname, search: '' }, ...I18N,
       document: { cookie: '', createElement: (tag) => el(tag),
         querySelector: () => nav } };
-    vm.runInNewContext(read('web/common.js').replace(/^export /gm, ''), context);
+    vm.runInNewContext(commonScript(), context);
     context.renderNav();
     expect(nav.children[0].attributes['aria-current']).toBe('page');
     expect(nav.children[1].attributes.href).toBe(`/auth/login?return=${encodeURIComponent(pathname)}`);
@@ -174,14 +179,14 @@ test('API navigation is linked from docs, keeps the website header active and pr
 
 test('every app menu has exactly one Docs button to /docs, for viewers and the owner, without duplicates', () => {
   for (const html of ['index', 'watch', 'upload', 'docs', 'docs-api']) {
-    expect(read(`web/${html}.html`)).toMatch(/<header class="dl-header">[\s\S]*<nav class="dl-nav" aria-label="Site"><\/nav>[\s\S]*<\/header>/);
+    expect(read(`web/${html}.html`)).toMatch(/<header class="dl-header">[\s\S]*<nav class="dl-nav" aria-label="Site" data-zh-label="网站"><\/nav>[\s\S]*<\/header>/);
   }
   for (const pathname of ['/', '/2026102700', '/upload', '/docs', '/docs/api']) {
     for (const cookie of ['', 'video_owner=1']) {
       const nav = el('nav');
-      const context = { Node: Element, location: { pathname, search: '' },
+      const context = { Node: Element, location: { pathname, search: '' }, ...I18N,
         document: { cookie, createElement: (tag) => el(tag), querySelector: () => nav } };
-      vm.runInNewContext(read('web/common.js').replace(/^export /gm, ''), context);
+      vm.runInNewContext(commonScript(), context);
       context.renderNav();
       context.renderNav();
       const docs = nav.children.filter((child) => child.attributes.href === '/docs');
@@ -191,7 +196,8 @@ test('every app menu has exactly one Docs button to /docs, for viewers and the o
       expect(docs[0].textContent).toBe('Docs');
       expect(docs[0].attributes['aria-current']).toBe(pathname.startsWith('/docs') ? 'page' : undefined);
       expect(nav.children.map((child) => child.attributes.href)).toEqual(cookie
-        ? ['/docs', '/upload', '/auth/logout'] : ['/docs', `/auth/login?return=${encodeURIComponent(pathname)}`]);
+        ? ['/docs', '/upload', '/auth/logout', undefined] : ['/docs', `/auth/login?return=${encodeURIComponent(pathname)}`, undefined]);
+      expect(nav.children.at(-1)).toBe(I18N.languageSwitcher());
     }
   }
   expect(read('web/style.css')).not.toMatch(/\.docs[^{]*\{[^}]*display:\s*none/);

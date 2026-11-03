@@ -1,4 +1,7 @@
 // Shared helpers for the video.dliu.com pages.
+import { languageSwitcher, locale, t, translateError } from './i18n.js';
+
+export { t };
 
 // The owner hint cookie only decides whether to show owner controls; the API checks the real session.
 export const isOwner = () => document.cookie.split(';').some((c) => c.trim() === 'video_owner=1');
@@ -27,7 +30,7 @@ export async function api(path, body) {
   }
   const response = await fetch(path, init);
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new ApiError(data.error || `Request failed (${response.status})`, response.status);
+  if (!response.ok) throw new ApiError(translateError(data.error || `Request failed (${response.status})`), response.status);
   return data;
 }
 
@@ -36,7 +39,7 @@ export async function getData(path) {
   const response = await fetch(path, { headers: { accept: 'application/json' } });
   // S3 behind CloudFront answers 403 for keys that do not exist.
   if (response.status === 403 || response.status === 404) return null;
-  if (!response.ok) throw new Error(`Could not load ${path} (${response.status})`);
+  if (!response.ok) throw new Error(t(`无法加载 ${path}（${response.status}）`, `Could not load ${path} (${response.status})`));
   return response.json();
 }
 
@@ -51,7 +54,7 @@ export function formatDuration(seconds) {
 
 export function formatDate(iso) {
   const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 export function formatSize(bytes) {
@@ -88,32 +91,33 @@ export function toast(message) {
   setTimeout(() => node.remove(), 2500);
 }
 
-export async function copyText(text, message = 'Copied') {
+export async function copyText(text, message = t('已复制', 'Copied')) {
   try {
     await navigator.clipboard.writeText(text);
     toast(message);
   } catch {
-    toast('Copy failed; select the text and copy it yourself');
+    toast(t('复制失败，请自己选中文字后复制', 'Copy failed; select the text and copy it yourself'));
   }
 }
 
-/** Fills the header's nav: Docs for everyone, then Upload and Sign out for the owner or Sign in for viewers. */
+/** Fills the header's nav: Docs for everyone, Upload and Sign out for the owner or Sign in for viewers, then the language switch. */
 export function renderNav() {
   const nav = document.querySelector('.dl-header .dl-nav');
   if (!nav) return;
   nav.replaceChildren();
-  const docs = el('a', { class: 'dl-button', href: '/docs' }, 'Docs');
+  const docs = el('a', { class: 'dl-button', href: '/docs' }, t('文档', 'Docs'));
   const page = location.pathname.replace(/\/$/, '');
   if (page === '/docs' || page === '/docs/api') docs.setAttribute('aria-current', 'page');
   nav.append(docs);
   if (isOwner()) {
     nav.append(
-      el('a', { class: 'dl-button dl-button-primary', href: '/upload' }, '＋ Upload'),
-      el('a', { class: 'dl-button', href: '/auth/logout' }, 'Sign out'),
+      el('a', { class: 'dl-button dl-button-primary', href: '/upload' }, t('＋ 上传', '＋ Upload')),
+      el('a', { class: 'dl-button', href: '/auth/logout' }, t('退出', 'Sign out')),
     );
   } else {
-    nav.append(el('a', { class: 'dl-button dl-signin', href: signInUrl() }, 'Sign in'));
+    nav.append(el('a', { class: 'dl-button dl-signin', href: signInUrl() }, t('登录', 'Sign in')));
   }
+  nav.append(languageSwitcher());
 }
 
 export const signInUrl = () => `/auth/login?return=${encodeURIComponent(location.pathname + location.search)}`;
@@ -125,12 +129,12 @@ export function captureFrame(video, maxWidth = 1280) {
   canvas.width = Math.round(video.videoWidth * scale);
   canvas.height = Math.round(video.videoHeight * scale);
   canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-  return new Promise((resolve, reject) => canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Could not capture the frame'))), 'image/jpeg', 0.85));
+  return new Promise((resolve, reject) => canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error(t('无法截取画面', 'Could not capture the frame')))), 'image/jpeg', 0.85));
 }
 
 /** PUT a blob to a presigned S3 URL. */
 export async function putBlob(url, blob, contentType) {
   const response = await fetch(url, { method: 'PUT', body: blob, headers: { 'content-type': contentType } });
-  if (!response.ok) throw new Error(`Upload failed (${response.status})`);
+  if (!response.ok) throw new Error(t(`上传失败（${response.status}）`, `Upload failed (${response.status})`));
   return response;
 }

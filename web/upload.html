@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Upload · Video · dliu.com</title>
+  <title data-zh="上传 · 视频 · dliu.com">Upload · Video · dliu.com</title>
   <link rel="icon" href="/logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="https://files.dliu.com/dliu.com/ui/v1/dl.css">
   <link rel="stylesheet" href="/style.css">
@@ -11,22 +11,22 @@
 </head>
 <body class="dl-page">
   <header class="dl-header">
-    <a class="dl-brand" href="/"><img class="dl-logo" src="/logo.svg" alt="" width="32" height="32">Video</a>
-    <nav class="dl-nav" aria-label="Site"></nav>
+    <a class="dl-brand" href="/"><img class="dl-logo" src="/logo.svg" alt="" width="32" height="32"><span data-zh="视频">Video</span></a>
+    <nav class="dl-nav" aria-label="Site" data-zh-label="网站"></nav>
   </header>
   <main class="dl-main dl-narrow">
-    <h1 id="heading">Upload a video</h1>
-    <p class="dl-muted" id="replace-note" hidden>The new file takes the old one’s place: the address, title, description and embeds stay the same, and the old file is deleted.</p>
+    <h1 id="heading" data-zh="上传视频">Upload a video</h1>
+    <p class="dl-muted" id="replace-note" hidden data-zh="新文件会取代旧文件：地址、标题、简介和嵌入都保持不变，旧文件会被删除。">The new file takes the old one’s place: the address, title, description and embeds stay the same, and the old file is deleted.</p>
     <form id="form">
       <label class="drop" id="drop" for="file">
         <input type="file" id="file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v,video/ogg,.mp4,.m4v,.mov,.webm,.ogv">
-        <strong>Choose a video</strong> or drop it here<br>
-        <span class="dl-muted">MP4 (H.264/AAC) plays everywhere. The file is served as uploaded, with no re-encoding.</span>
+        <strong data-zh="选择视频">Choose a video</strong> <span data-zh="或拖放到这里">or drop it here</span><br>
+        <span class="dl-muted" data-zh="MP4（H.264/AAC）在所有设备上都能播放。文件 2 小时内没有被替换后，会生成多种画质的流媒体版本。">MP4 (H.264/AAC) plays everywhere. Streaming versions in several qualities are made once the file has not been replaced for 2 hours.</span>
       </label>
 
       <div id="details" hidden>
         <div class="preview">
-          <img id="poster" alt="Thumbnail preview">
+          <img id="poster" alt="Thumbnail preview" data-zh-label="缩略图预览">
           <div>
             <div id="file-info"></div>
             <p class="dl-muted" id="poster-note"></p>
@@ -34,15 +34,15 @@
           </div>
         </div>
         <div id="fields">
-          <label for="title">Title</label>
+          <label for="title" data-zh="标题">Title</label>
           <input type="text" id="title" maxlength="200" required>
-          <label for="description">Description</label>
+          <label for="description" data-zh="简介">Description</label>
           <textarea id="description" maxlength="5000"></textarea>
         </div>
-        <label class="inline" id="new-poster-box" hidden><input type="checkbox" id="new-poster" checked> Replace the thumbnail with this one</label>
+        <label class="inline" id="new-poster-box" hidden><input type="checkbox" id="new-poster" checked> <span data-zh="用这张替换缩略图">Replace the thumbnail with this one</span></label>
         <p class="row">
-          <button class="dl-button dl-button-primary" type="submit" id="submit">Upload</button>
-          <button class="dl-button" type="button" id="cancel" hidden>Cancel upload</button>
+          <button class="dl-button dl-button-primary" type="submit" id="submit" data-zh="上传">Upload</button>
+          <button class="dl-button" type="button" id="cancel" hidden data-zh="取消上传">Cancel upload</button>
         </p>
       </div>
 
@@ -55,7 +55,7 @@
   </main>
   <footer class="dl-footer">
     <a class="dl-footer-logo" href="https://dliu.com" aria-label="dliu.com"><img src="https://files.dliu.com/dliu.com/favicon.png" alt="" width="24" height="24"></a>
-    <a href="https://dliu.com">dliu.com</a> · <a href="/">All videos</a> · <a href="/docs">How it works</a>
+    <a href="https://dliu.com">dliu.com</a> · <a href="/docs" data-zh="文档">Docs</a>
   </footer>
 </body>
 </html>

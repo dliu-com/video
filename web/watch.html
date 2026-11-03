@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Video · dliu.com</title>
+  <title data-zh="视频 · dliu.com">Video · dliu.com</title>
   <link rel="icon" href="/logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="https://files.dliu.com/dliu.com/ui/v1/dl.css">
   <link rel="stylesheet" href="/style.css">
@@ -11,62 +11,62 @@
 </head>
 <body class="dl-page">
   <header class="dl-header">
-    <a class="dl-brand" href="/"><img class="dl-logo" src="/logo.svg" alt="" width="32" height="32">Video</a>
-    <nav class="dl-nav" aria-label="Site"></nav>
+    <a class="dl-brand" href="/"><img class="dl-logo" src="/logo.svg" alt="" width="32" height="32"><span data-zh="视频">Video</span></a>
+    <nav class="dl-nav" aria-label="Site" data-zh-label="网站"></nav>
   </header>
   <main class="dl-main">
-    <p class="dl-muted" id="status">Loading…</p>
+    <p class="dl-muted" id="status" data-zh="加载中…">Loading…</p>
     <section id="video" hidden>
       <div class="player"><video id="player" playsinline preload="metadata"></video></div>
       <h1 class="watch-title" id="title"></h1>
       <div class="row spread">
         <span class="dl-muted" id="meta"></span>
         <div class="row">
-          <button class="dl-button" id="share" type="button">🔗 Copy link</button>
-          <button class="dl-button" id="embed-toggle" type="button">&lt;/&gt; Embed</button>
+          <button class="dl-button" id="share" type="button" data-zh="🔗 复制链接">🔗 Copy link</button>
+          <button class="dl-button" id="embed-toggle" type="button" data-zh="&lt;/&gt; 嵌入">&lt;/&gt; Embed</button>
         </div>
       </div>
       <div class="description" id="description"></div>
 
       <div class="dl-panel box" id="embed" hidden>
-        <h2>Embed this video</h2>
-        <p class="dl-muted">Paste this HTML into a page on dliu.com or one of its subdomains (for example, a blog post).</p>
+        <h2 data-zh="嵌入此视频">Embed this video</h2>
+        <p class="dl-muted" data-zh="把这段 HTML 粘贴到 dliu.com 或其子域名的网页中（例如博客文章）。">Paste this HTML into a page on dliu.com or one of its subdomains (for example, a blog post).</p>
         <div class="row">
-          <label class="inline"><input type="checkbox" id="embed-start"> Start at current time</label>
-          <label class="inline"><input type="checkbox" id="embed-autoplay"> Autoplay (muted)</label>
-          <label class="inline"><input type="checkbox" id="embed-loop"> Loop</label>
+          <label class="inline"><input type="checkbox" id="embed-start"> <span data-zh="从当前时间开始">Start at current time</span></label>
+          <label class="inline"><input type="checkbox" id="embed-autoplay"> <span data-zh="自动播放（静音）">Autoplay (muted)</span></label>
+          <label class="inline"><input type="checkbox" id="embed-loop"> <span data-zh="循环播放">Loop</span></label>
         </div>
         <label for="embed-code">HTML</label>
         <textarea class="code" id="embed-code" readonly></textarea>
-        <div class="row"><button class="dl-button dl-button-primary" id="embed-copy" type="button">Copy HTML</button><a id="embed-open" target="_blank" rel="noopener">Open player</a></div>
+        <div class="row"><button class="dl-button dl-button-primary" id="embed-copy" type="button" data-zh="复制 HTML">Copy HTML</button><a id="embed-open" target="_blank" rel="noopener" data-zh="打开播放器">Open player</a></div>
       </div>
 
       <div class="dl-panel box" id="owner" hidden>
-        <h2>Edit</h2>
+        <h2 data-zh="编辑">Edit</h2>
         <form id="edit-form">
-          <label for="edit-title">Title</label>
+          <label for="edit-title" data-zh="标题">Title</label>
           <input type="text" id="edit-title" maxlength="200" required>
-          <label for="edit-description">Description</label>
+          <label for="edit-description" data-zh="简介">Description</label>
           <textarea id="edit-description" maxlength="5000"></textarea>
           <p class="row">
-            <button class="dl-button dl-button-primary" type="submit">Save</button>
-            <button class="dl-button" type="button" id="poster-frame">🖼 Use current frame as thumbnail</button>
-            <a class="dl-button" id="replace">⟳ Replace video file</a>
-            <button type="button" class="dl-button dl-button-danger" id="delete">Delete video</button>
+            <button class="dl-button dl-button-primary" type="submit" data-zh="保存">Save</button>
+            <button class="dl-button" type="button" id="poster-frame" data-zh="🖼 用当前画面作缩略图">🖼 Use current frame as thumbnail</button>
+            <a class="dl-button" id="replace" data-zh="⟳ 替换视频文件">⟳ Replace video file</a>
+            <button type="button" class="dl-button dl-button-danger" id="delete" data-zh="删除视频">Delete video</button>
           </p>
           <p class="dl-muted" id="edit-status"></p>
         </form>
-        <h2 class="streaming-title">Streaming versions</h2>
-        <p class="dl-muted">Smaller copies in several qualities, so viewers on slow or mobile connections start quickly.
+        <h2 class="streaming-title" data-zh="流媒体版本">Streaming versions</h2>
+        <p class="dl-muted" data-zh="多种画质的较小副本，让网速慢或用手机的观众也能很快开始播放。文件 2 小时内没有被替换后才会生成；在此之前观众看到的是原始文件。">Smaller copies in several qualities, so viewers on slow or mobile connections start quickly.
           They are made once the file has not been replaced for 2 hours; until then viewers get the original file.</p>
-        <p class="row"><span id="conversion">Checking…</span>
-          <button type="button" class="dl-button" id="convert" hidden>Convert now</button></p>
+        <p class="row"><span id="conversion" data-zh="正在检查…">Checking…</span>
+          <button type="button" class="dl-button" id="convert" hidden data-zh="立即转换">Convert now</button></p>
       </div>
     </section>
   </main>
   <footer class="dl-footer">
     <a class="dl-footer-logo" href="https://dliu.com" aria-label="dliu.com"><img src="https://files.dliu.com/dliu.com/favicon.png" alt="" width="24" height="24"></a>
-    <a href="https://dliu.com">dliu.com</a> · <a href="/">All videos</a> · <a href="/docs">How it works</a>
+    <a href="https://dliu.com">dliu.com</a> · <a href="/docs" data-zh="文档">Docs</a>
   </footer>
 </body>
 </html>
