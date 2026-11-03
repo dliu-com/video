@@ -281,7 +281,7 @@ export class VideoStack extends Stack {
       this, 'TrafficGeo', Fn.importValue('TrafficGeoOriginRequestPolicyId'));
 
     const pagesFunction = new cloudfront.Function(this, 'PagesFunction', {
-      comment: 'Serves /watch, /upload, /docs, /docs/api, /docs/health and /embed/<id> from their .html files',
+      comment: 'Serves /watch, /upload, /docs, /docs/api and /embed/<id> from their .html files; /docs/health -> /docs#health',
       runtime: cloudfront.FunctionRuntime.JS_2_0,
       code: cloudfront.FunctionCode.fromFile({ filePath: path.join(ROOT, 'functions/pages.js') }),
     });

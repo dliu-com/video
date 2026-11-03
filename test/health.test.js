@@ -1,4 +1,4 @@
-// Guards the status.dliu.com health contract: /health, /docs/health and /docs/health.md (dliu-com/status HEALTH.md).
+// Guards the status.dliu.com health contract: /health, the /docs#health tab and /docs/health.md (dliu-com/status HEALTH.md).
 const fs = require('fs');
 const path = require('path');
 const { FUNCTIONS, health } = require('../lambda/api/health');
@@ -6,8 +6,9 @@ const { createHandler } = require('../lambda/api');
 
 const read = (file) => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
 const md = read('web/docs/health.md');
-const html = read('web/docs-health.html');
-const page = html.slice(html.indexOf('<article class="dl-docs health-doc"'), html.indexOf('</article>'));
+const html = read('web/docs.html');
+const start = html.indexOf('<article id="health"');
+const page = html.slice(start, html.indexOf('</article>', start));
 const KEYS = FUNCTIONS.map((f) => f.key);
 const section = (text, title) => text.split(title)[1].split('\n## ')[0];
 const mdRows = (text) => text.split('\n').filter((l) => /^\| (?!-)/.test(l)).slice(1)
@@ -47,7 +48,9 @@ test('a slow check warns (200); a failed or timed-out check fails (503) with a g
   jest.useFakeTimers();
   try {
     const pending = health({ probes: probes({ signin: () => new Promise(() => {}) }) });
-    await jest.advanceTimersByTimeAsync(2000);
+    await jest.advanceTimersByTimeAsync(3999);
+    expect(jest.getTimerCount()).toBe(1);
+    await jest.advanceTimersByTimeAsync(1);
     const hung = JSON.parse((await pending).body);
     expect(hung.functions.find((f) => f.key === 'signin')).toMatchObject({ status: 'fail', output: 'timeout' });
   } finally {
@@ -81,7 +84,7 @@ test('the handler answers /health without reading cookies, headers, the query st
   expect(calls).toBe(2);
 });
 
-test('the function keys agree across /health, /docs/health and /docs/health.md', () => {
+test('the function keys agree across /health, the /docs#health tab and /docs/health.md', () => {
   const mdFunctions = mdRows(section(md, '## Functions')).map((r) => r[0]);
   expect([...page.matchAll(/data-function="([a-z]+)"/g)].map((m) => m[1])).toEqual(mdFunctions);
   for (const key of KEYS) expect(mdFunctions).toContain(key);
@@ -111,8 +114,8 @@ test('the guest checks and /health details on the page match the Markdown file',
   expect(read('web/docs/api.md')).toContain(msapi);
 });
 
-test('/docs/health has a diagram, plain lines per function, and every technical detail folded', () => {
-  expect(page).toMatch(/data-path="\/docs\/health"/);
+test('the /docs#health Testing tab has a diagram, plain lines per function, and every technical detail folded', () => {
+  expect(page).toMatch(/^<article id="health" class="dl-docs health-doc" hidden>/);
   expect(page).toMatch(/class="dg-flow"/);
   expect((page.match(/class="dg-step[ "]/g) || []).length).toBeGreaterThanOrEqual(4);
   expect(page).toMatch(/class="dg-arrow"/);
@@ -131,8 +134,17 @@ test('/docs/health has a diagram, plain lines per function, and every technical 
   for (const [, , attributes, text] of prose) expect([text, attributes]).toEqual([text, expect.stringContaining('data-zh=')]);
 });
 
-test('every docs page links the Health checks tab', () => {
-  for (const file of ['web/docs.html', 'web/docs-api.html', 'web/docs-health.html']) {
-    expect(read(file)).toMatch(/<a href="\/docs\/health"[^>]*data-zh="健康检查">Health checks<\/a>/);
+test('the Testing tab is on /docs, linked from every docs page, and /docs/health redirects to it', () => {
+  expect(html).toContain('<a href="#health" data-tab="health" data-zh="测试">Testing</a>');
+  expect(read('web/docs-api.html')).toContain('<a href="/docs#health" data-zh="测试">Testing</a>');
+  expect(read('web/docs.js')).toMatch(/const TABS = \[[^\]]*'health'\]/);
+  expect(fs.existsSync(path.join(__dirname, '..', 'web/docs-health.html'))).toBe(false);
+  const code = read('functions/pages.js');
+  const pages = new Function(`${code}\nreturn handler;`)();
+  for (const uri of ['/docs/health', '/docs/health/']) {
+    expect(pages({ request: { uri } })).toEqual({
+      statusCode: 301, statusDescription: 'Moved Permanently', headers: { location: { value: '/docs#health' } },
+    });
   }
+  expect(pages({ request: { uri: '/docs/health.md' } }).uri).toBe('/docs/health.md');
 });

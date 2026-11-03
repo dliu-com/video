@@ -2,7 +2,7 @@
 
 How [status.dliu.com](https://status.dliu.com) tests https://video.dliu.com (DL video) as an anonymous guest, following
 the dliu.com health contract (dliu-com/status `HEALTH.md`). The version for people, with a diagram, is
-https://video.dliu.com/docs/health. This file has every technical detail and is enough on its own to implement the tests.
+the Testing tab at https://video.dliu.com/docs#health. This file has every technical detail and is enough on its own to implement the tests.
 
 DL video hosts videos that anyone can watch, and embed players that other dliu.com sites (such as the blog) put in
 their pages. Only the owner signs in, to upload, edit and delete. The checks below prove the public parts work and that
@@ -57,8 +57,8 @@ Notes:
   `Authorization` header and no query string, and the Lambda answers before it looks at any request data.
 - Cached at CloudFront for 60 s (`Cache-Control: public, max-age=60`, cache key empty), so it runs at most about once a
   minute per edge.
-- Read only. Each function has its own 2 s timeout; a check slower than 1 s is `warn` with `output` `slow`. The whole
-  reply returns within about 2 s.
+- Read only. Each function has its own 4 s timeout; a check slower than 1 s is `warn` with `output` `slow` (expected
+  for the first request after the Lambda has been idle). The whole reply returns within about 4 s.
 - `Content-Type: application/health+json`. HTTP 200 when `status` is `pass` or `warn`, 503 when it is `fail`.
 - `output` is only `slow`, `timeout` or `read failed`. No names, counts or content.
 

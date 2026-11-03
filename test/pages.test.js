@@ -14,8 +14,6 @@ describe('pages CloudFront function', () => {
     ['/docs/', '/docs.html'],
     ['/docs/api', '/docs-api.html'],
     ['/docs/api/', '/docs-api.html'],
-    ['/docs/health', '/docs-health.html'],
-    ['/docs/health/', '/docs-health.html'],
     ['/docs/health.md', '/docs/health.md'],
     ['/docs/api.md', '/docs/api.md'],
     ['/docs/api.md', '/docs/api.md'],

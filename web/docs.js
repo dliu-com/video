@@ -3,7 +3,7 @@ import { flow, tiers, stats, table, callout, more } from './diagram.js';
 
 renderNav();
 
-const TABS = ['architecture', 'cost', 'security'];
+const TABS = ['architecture', 'cost', 'security', 'health'];
 const num = (text) => ({ text, className: 'num' });
 const mono = (text) => ({ text, className: 'mono' });
 
@@ -461,7 +461,7 @@ function show(scroll) {
     if (link.dataset.tab === current) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   }
-  const titles = { architecture: t('技术架构', 'Technical architecture'), cost: t('运行成本', 'Cost'), security: t('安全', 'Security') };
+  const titles = { architecture: t('技术架构', 'Technical architecture'), cost: t('运行成本', 'Cost'), security: t('安全', 'Security'), health: t('测试', 'Testing') };
   document.title = `${titles[current]} · ${t('文档 · DL 视频', 'Docs · DL video')} · dliu.com`;
   if (scroll) window.scrollTo(0, 0);
 }

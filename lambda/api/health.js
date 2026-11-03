@@ -1,10 +1,11 @@
 'use strict';
 // GET /health for status.dliu.com (contract: dliu-com/status HEALTH.md). Anonymous and read only: one cheap read per
 // dependency, and nothing about the site's videos, names or counts in the reply. The handler is given no request data.
-const CHECK_TIMEOUT_MS = 2000;
+// A cold start (loading the AWS SDK, first TLS connections) takes about 2 s, so 4 s leaves room under the 5 s limit.
+const CHECK_TIMEOUT_MS = 4000;
 const SLOW_MS = 1000;
 
-// Keys match /docs/health and /docs/health.md (test/health.test.js keeps the three in sync).
+// Keys match the /docs#health tab and /docs/health.md (test/health.test.js keeps the three in sync).
 const FUNCTIONS = Object.freeze([
   { key: 'catalog', name: 'Video list and storage' },
   { key: 'signin', name: 'Microsoft sign-in settings' },
@@ -27,12 +28,15 @@ async function run(probe, clock) {
   }
 }
 
+let s3;
+
 function defaultProbes() {
   return {
     // The catalog file every page reads: one HeadObject, no LIST and no download.
     catalog: async () => {
       const { S3Client, HeadObjectCommand } = require('@aws-sdk/client-s3');
-      await new S3Client({}).send(new HeadObjectCommand({ Bucket: process.env.VIDEO_BUCKET, Key: 'data/catalog.json' }));
+      s3 = s3 || new S3Client({});
+      await s3.send(new HeadObjectCommand({ Bucket: process.env.VIDEO_BUCKET, Key: 'data/catalog.json' }));
     },
     // The settings sign-in already loads (cached 5 minutes); Microsoft itself is not called.
     signin: async () => {

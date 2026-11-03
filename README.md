@@ -6,7 +6,7 @@ The docs at [video.dliu.com/docs](https://video.dliu.com/docs) cover the technic
 The dedicated [API reference](https://video.dliu.com/docs/api) documents the nine Microsoft-token routes,
 request/response fields and the direct-to-S3 multipart workflow. Agents can read the same source at
 [/docs/api.md](https://video.dliu.com/docs/api.md); its browser page renders that single Markdown source.
-[/docs/health](https://video.dliu.com/docs/health) explains, with a diagram, how [status.dliu.com](https://status.dliu.com)
+The Testing tab, [/docs#health](https://video.dliu.com/docs#health), explains with a diagram how [status.dliu.com](https://status.dliu.com)
 tests the site as an anonymous guest every 15 minutes; [/docs/health.md](https://video.dliu.com/docs/health.md) is the
 full technical version (every URL, status code and marker) for machines.
 
@@ -61,8 +61,8 @@ When idle, the only cost is video storage. See [/docs#cost](https://video.dliu.c
 | --- | --- |
 | `lib/video-stack.ts` | The CDK stack |
 | `lambda/api/` | API and sign-in Lambda (`index.js` routes, `videos.js` upload/edit/delete, `streaming.js` MediaConvert conversion, `store.js` S3 data, `auth.js` Entra, `presign.js` SigV4) |
-| `functions/pages.js` | CloudFront Function for clean URLs (`/<id>`, `/embed/<id>`, `/upload`, `/docs`, `/docs/api`, `/docs/health`) |
-| `web/` | Static pages: home, watch, upload, embed, and docs (`i18n.js` Chinese / English) (`docs.js` content, `docs-api.html` and `docs-api.js` render `docs/api.md`, `diagram.js` diagram kit from traffic-monitor, `docs-health.html` the health-check page for people, `docs/health.md` its technical version). `player.js` is the shared player |
+| `functions/pages.js` | CloudFront Function for clean URLs (`/<id>`, `/embed/<id>`, `/upload`, `/docs`, `/docs/api`; `/docs/health` answers 301 to `/docs#health`) |
+| `web/` | Static pages: home, watch, upload, embed, and docs (`i18n.js` Chinese / English) (`docs.js` content, `docs-api.html` and `docs-api.js` render `docs/api.md`, `diagram.js` diagram kit from traffic-monitor, the Testing tab in `docs.html` for people, `docs/health.md` its technical version). `player.js` is the shared player |
 | `web/vendor/` | Plyr and hls.js with their version in the file names, copied from `node_modules` by `make vendor` (`scripts/vendor.js`) and committed |
 | `config/site.json` | Subdomain, sites allowed to embed, upload size cap |
 | `scripts/set-secrets.sh` | Stores the Entra app credentials in SSM |
@@ -271,7 +271,8 @@ dliu.com health contract (dliu-com/status `HEALTH.md`):
   for fail, with `output` limited to `slow`, `timeout` or `read failed`. The CloudFront `health` behavior forwards no
   cookies, headers or query string and caches the reply for 60 s, and the handler answers before it reads any request
   data.
-- `/docs/health` (people, with a diagram and the details folded) and `/docs/health.md` (machines, served as
+- The `/docs#health` Testing tab (people, with a diagram and the details folded; the old `/docs/health` URL answers
+  301 to it) and `/docs/health.md` (machines, served as
   `text/markdown; charset=utf-8`) must stay in sync; `test/health.test.js` fails if the keys, rows or JSON drift apart,
   if the diagram or folds go, or if `/health` starts reading request data.
 
