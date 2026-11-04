@@ -1,7 +1,7 @@
 # video.dliu.com health checks
 
 How [status.dliu.com](https://status.dliu.com) tests https://video.dliu.com (DL video) as an anonymous guest, following
-the dliu.com health contract (dliu-com/status `HEALTH.md`). The version for people, with a diagram, is
+the dliu.com health contract (dliu-com/status `HEALTH.md`). The version for people, with flows, numbers, a table and a chart, is
 the Testing tab at https://video.dliu.com/docs#health. This file has every technical detail and is enough on its own to implement the tests.
 
 DL video hosts videos that anyone can watch, and embed players that other dliu.com sites (such as the blog) put in

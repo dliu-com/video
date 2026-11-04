@@ -17,7 +17,7 @@ class Element {
 }
 
 function renderDocs() {
-  const articles = Object.fromEntries(['architecture', 'cost', 'security', 'health'].map((id) => [id, new Element('article')]));
+  const articles = Object.fromEntries(['architecture', 'cost', 'security', 'health', 'api'].map((id) => [id, new Element('article')]));
   const document = {
     createElement: (tag) => new Element(tag),
     getElementById: (id) => articles[id],

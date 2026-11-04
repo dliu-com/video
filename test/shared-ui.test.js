@@ -6,7 +6,7 @@ const DL_CSS = '<link rel="stylesheet" href="https://files.dliu.com/dliu.com/ui/
 const DL_ICON = 'https://files.dliu.com/dliu.com/favicon.png';
 
 test('every page loads the shared dliu.com stylesheet before its own', () => {
-  for (const html of ['index', 'watch', 'upload', 'docs', 'docs-api', 'embed']) {
+  for (const html of ['index', 'watch', 'upload', 'docs', 'embed']) {
     const page = read(`web/${html}.html`);
     expect(page).toContain(DL_CSS);
     expect(page.indexOf(DL_CSS)).toBeLessThan(page.indexOf('<link rel="stylesheet" href="/style.css">'));
@@ -14,7 +14,7 @@ test('every page loads the shared dliu.com stylesheet before its own', () => {
 });
 
 test('every app page has the shared header with the video logo, and the shared footer with the DL logo', () => {
-  for (const html of ['index', 'watch', 'upload', 'docs', 'docs-api']) {
+  for (const html of ['index', 'watch', 'upload', 'docs']) {
     const page = read(`web/${html}.html`);
     expect(page).toContain('<link rel="icon" href="/logo.svg" type="image/svg+xml">');
     expect(page).toContain('<body class="dl-page">');
@@ -27,7 +27,7 @@ test('every app page has the shared header with the video logo, and the shared f
 });
 
 test('docs pages load the shared docs stylesheet and tabs, and the app has no docs stylesheet of its own', () => {
-  for (const html of ['docs', 'docs-api']) {
+  for (const html of ['docs']) {
     const page = read(`web/${html}.html`);
     expect(page).toContain('<link rel="stylesheet" href="https://files.dliu.com/dliu.com/ui/v1/dl-docs.css">');
     expect(page).toContain('<main class="dl-main dl-docs-main">');

@@ -1,6 +1,6 @@
 # Video API
 
-This reference is for trusted tools, scripts and AI agents managing videos on https://video.dliu.com. The same guide is available as plain Markdown at https://video.dliu.com/docs/api.md.
+This reference is for trusted tools, scripts and AI agents managing videos on https://video.dliu.com. The same guide is available as plain Markdown at https://video.dliu.com/docs/api.md; the version for people is the API tab at https://video.dliu.com/docs#api.
 
 The managed API accepts Microsoft-issued user access tokens. It can list videos, upload or replace video files, edit details and posters, and delete videos when the token has the corresponding permission. Every completed new upload is published immediately: there is no draft, private or unlisted state.
 
@@ -8,7 +8,7 @@ The managed API accepts Microsoft-issued user access tokens. It can list videos,
 
 ## Quick rules
 
-1. Use `VIDEO_API_URL` for the managed API origin. The current deployment output `MicrosoftApiUrl` is `https://hdauj691e9.execute-api.eu-west-1.amazonaws.com`. All nine managed routes are listed below.
+1. Use `VIDEO_API_URL` for the managed API origin. The current deployment output `MicrosoftApiUrl` is `https://hdauj691e9.execute-api.eu-west-1.amazonaws.com`. All ten managed routes are listed below.
 2. Configure authentication according to the [Auth API documentation](https://auth.dliu.com/docs/api) before using any managed route. Video website sign-in is not managed API authentication.
 3. POST bodies are JSON objects with `Content-Type: application/json`. Keep bodies below 64 KiB; the Lambda checks decoded string length against 65,536 JavaScript code units. Do not send video bytes or multipart form data to this API.
 4. Managed API requests do not need `Origin`, website cookies or `x-amz-content-sha256`. The website cookie API is a separate entry point; do not send bearer requests to `https://video.dliu.com/api/*`.

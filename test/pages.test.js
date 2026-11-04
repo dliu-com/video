@@ -12,8 +12,6 @@ describe('pages CloudFront function', () => {
     ['/upload', '/upload.html'],
     ['/docs', '/docs.html'],
     ['/docs/', '/docs.html'],
-    ['/docs/api', '/docs-api.html'],
-    ['/docs/api/', '/docs-api.html'],
     ['/docs/health.md', '/docs/health.md'],
     ['/docs/api.md', '/docs/api.md'],
     ['/docs/api.md', '/docs/api.md'],
@@ -34,5 +32,14 @@ describe('pages CloudFront function', () => {
     ['/constructor', '/constructor'],
   ])('%s -> %s', (input, expected) => {
     expect(uriFor(input)).toBe(expected);
+  });
+
+  test.each([
+    ['/docs/api', '/docs#api'], ['/docs/api/', '/docs#api'],
+    ['/docs/health', '/docs#health'], ['/docs/health/', '/docs#health'],
+  ])('%s -> 301 %s', (uri, location) => {
+    expect(handler({ request: { uri } })).toEqual({
+      statusCode: 301, statusDescription: 'Moved Permanently', headers: { location: { value: location } },
+    });
   });
 });

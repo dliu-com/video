@@ -2,11 +2,12 @@
 
 A small, serverless video site. The owner uploads videos after signing in with Microsoft 365. Anyone can watch them. Any video can be embedded in other sites, such as blog.dliu.com.
 
-The docs at [video.dliu.com/docs](https://video.dliu.com/docs) cover the technical architecture, running costs and security (including a live penetration test).
-The dedicated [API reference](https://video.dliu.com/docs/api) documents the nine Microsoft-token routes,
-request/response fields and the direct-to-S3 multipart workflow. Agents can read the same source at
-[/docs/api.md](https://video.dliu.com/docs/api.md); its browser page renders that single Markdown source.
-The Testing tab, [/docs#health](https://video.dliu.com/docs#health), explains with a diagram how [status.dliu.com](https://status.dliu.com)
+The docs at [video.dliu.com/docs](https://video.dliu.com/docs) have tabs for the architecture, running costs, security (including a live penetration test), testing and the API.
+The API tab, [/docs#api](https://video.dliu.com/docs#api), shows people the ten Microsoft-token endpoints, their
+permissions and the upload flow in plain words, with flows, numbers, tables and a chart; the old `/docs/api` URL answers
+301 to it. The full reference for tools and agents, with request/response fields and the direct-to-S3 multipart
+workflow, is [/docs/api.md](https://video.dliu.com/docs/api.md).
+The Testing tab, [/docs#health](https://video.dliu.com/docs#health), shows with flows, numbers, a table and a chart how [status.dliu.com](https://status.dliu.com)
 tests the site as an anonymous guest every 15 minutes; [/docs/health.md](https://video.dliu.com/docs/health.md) is the
 full technical version (every URL, status code and marker) for machines.
 
@@ -32,7 +33,7 @@ flowchart LR
 - **Player.** [Plyr](https://github.com/sampotts/plyr) controls with [hls.js](https://github.com/video-dev/hls.js). Both are self-hosted in `web/vendor/` and loaded only when a video is shown. The ⚙ menu has Quality (Auto shows the level it is playing, for example "Auto (720p)"), Speed and Download (the original file). hls.js keeps 30 to 60 seconds downloaded ahead, the same in every browser. Auto never picks more pixels than the player shows. Safari on iPhone uses its own HLS player, which picks the quality itself.
 - **Uploads go straight from the browser to S3** using presigned multipart URLs. Parts are at least 16 MiB, four upload in parallel, and failed parts are retried. The browser also reads the duration and size and grabs a thumbnail frame.
 - **There is no database.** `meta/index.json` in the video bucket is the source of truth and is updated with conditional writes. The Lambda publishes `data/catalog.json` (the list of videos) and `data/videos/<id>.json` (one per video). Pages read these through CloudFront.
-- **Chinese / English.** The `文/A` switch at the end of the header (the shared `dl-language` markup) changes every page, the player menu and the docs. The choice is saved in the browser (`video-language` in localStorage); otherwise any `zh-*` browser language shows Chinese. `web/i18n.js` translates static text from `data-zh` attributes and scripts use `t('中文', 'English')`. Video titles and descriptions are shown as written. `/docs/api` and `docs/api.md` (for agents) stay English.
+- **Chinese / English.** The `文/A` switch at the end of the header (the shared `dl-language` markup) changes every page, the player menu and the docs. The choice is saved in the browser (`video-language` in localStorage); otherwise any `zh-*` browser language shows Chinese. `web/i18n.js` translates static text from `data-zh` attributes and scripts use `t('中文', 'English')`. Video titles and descriptions are shown as written. `/docs/api.md` (for agents) stays English.
 - Every video is listed on the home page and can be watched or embedded by anyone with its link.
 - **Sign-in** uses Entra OIDC with PKCE, the same as traffic-monitor. Only accounts in the root domain (`@dliu.com`) can manage videos.
 - Page views are logged by the shared traffic-monitor visitor function and geo origin request policy.
@@ -61,8 +62,8 @@ When idle, the only cost is video storage. See [/docs#cost](https://video.dliu.c
 | --- | --- |
 | `lib/video-stack.ts` | The CDK stack |
 | `lambda/api/` | API and sign-in Lambda (`index.js` routes, `videos.js` upload/edit/delete, `streaming.js` MediaConvert conversion, `store.js` S3 data, `auth.js` Entra, `presign.js` SigV4) |
-| `functions/pages.js` | CloudFront Function for clean URLs (`/<id>`, `/embed/<id>`, `/upload`, `/docs`, `/docs/api`; `/docs/health` answers 301 to `/docs#health`) |
-| `web/` | Static pages: home, watch, upload, embed, and docs (`i18n.js` Chinese / English) (`docs.js` content, `docs-api.html` and `docs-api.js` render `docs/api.md`, `diagram.js` diagram kit from traffic-monitor, the Testing tab in `docs.html` for people, `docs/health.md` its technical version). `player.js` is the shared player |
+| `functions/pages.js` | CloudFront Function for clean URLs (`/<id>`, `/embed/<id>`, `/upload`, `/docs`; `/docs/api` and `/docs/health` answer 301 to `/docs#api` and `/docs#health`) |
+| `web/` | Static pages: home, watch, upload, embed, and docs (`i18n.js` Chinese / English) (`docs.js` content, `diagram.js` diagram kit from traffic-monitor, the Testing and API tabs in `docs.html` for people, `docs/health.md` and `docs/api.md` their technical versions). `player.js` is the shared player |
 | `web/vendor/` | Plyr and hls.js with their version in the file names, copied from `node_modules` by `make vendor` (`scripts/vendor.js`) and committed |
 | `config/site.json` | Subdomain, sites allowed to embed, upload size cap |
 | `scripts/set-secrets.sh` | Stores the Entra app credentials in SSM |
@@ -271,10 +272,12 @@ dliu.com health contract (dliu-com/status `HEALTH.md`):
   for fail, with `output` limited to `slow`, `timeout` or `read failed`. The CloudFront `health` behavior forwards no
   cookies, headers or query string and caches the reply for 60 s, and the handler answers before it reads any request
   data.
-- The `/docs#health` Testing tab (people, with a diagram and the details folded; the old `/docs/health` URL answers
-  301 to it) and `/docs/health.md` (machines, served as
-  `text/markdown; charset=utf-8`) must stay in sync; `test/health.test.js` fails if the keys, rows or JSON drift apart,
-  if the diagram or folds go, or if `/health` starts reading request data.
+- The `/docs#health` Testing tab (people: flows, big numbers, a plain-words table and a chart, no technical details;
+  the old `/docs/health` URL answers 301 to it) and `/docs/health.md` (machines, every detail, served as
+  `text/markdown; charset=utf-8`) must stay in sync; `test/health.test.js` fails if the function keys or chart counts
+  drift from the Markdown, if the tab loses its flows or gains technical details (status codes, `<code>`, `<details>`,
+  URLs), or if `/health` starts reading request data. `test/api-docs.test.js` applies the same rules
+  (`test/human-docs.js`) to the API tab and checks its endpoints and chart against `lambda/api/routes.json`.
 
 ## Traffic monitoring
 

@@ -3,7 +3,7 @@ import { flow, tiers, stats, table, callout, more } from './diagram.js';
 
 renderNav();
 
-const TABS = ['architecture', 'cost', 'security', 'health'];
+const TABS = ['architecture', 'cost', 'security', 'health', 'api'];
 const num = (text) => ({ text, className: 'num' });
 const mono = (text) => ({ text, className: 'mono' });
 
@@ -177,7 +177,7 @@ function architecture(root) {
   authDocsLink.textContent = t('需要身份验证：请按照 Auth API 文档配置请求程序', 'Authentication is required: configure your requester using the Auth API documentation');
   const authParagraph = add('p', '');
   authParagraph.append(authDocsLink);
-  add('p', t('令牌获取、凭据存储/查找、过期/续期以及带身份验证的请求设置，都集中记录在 Auth API 文档中。视频网站在 /docs/api 记录自己的路由、权限、请求内容和上传流程。', 'Token acquisition, credential storage/lookup, expiry/renewal and authenticated request setup are documented centrally in the Auth API documentation. Video documents its own routes, permissions, payloads and upload workflow at /docs/api.'));
+  add('p', t('令牌获取、凭据存储/查找、过期/续期以及带身份验证的请求设置，都集中记录在 Auth API 文档中。视频网站自己的接口和上传流程见本页的 API 标签（/docs#api），完整技术版本见 /docs/api.md。', 'Token acquisition, credential storage/lookup, expiry/renewal and authenticated request setup are documented centrally in the Auth API documentation. Video documents its own endpoints and upload workflow on the API tab (/docs#api), with every detail in /docs/api.md.'));
   add('p', t('共享的应用/客户端 ID 既是资源受众（aud），也是批准的 SPA 客户端（azp）；两个声明仍会分别检查。普通用户通过网关成功调用尚未验证。', 'The shared application/client ID is both the resource audience (aud) and the approved SPA client (azp); both claims are still checked independently. Authenticated standard-user gateway success remains unverified.'));
   root.append(table([t('权限', 'Permission'), t('操作', 'Operations')], [
     [mono('video.read'), t('读取 API 身份并列出视频', 'Read API identity and list videos')],
@@ -461,7 +461,7 @@ function show(scroll) {
     if (link.dataset.tab === current) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   }
-  const titles = { architecture: t('技术架构', 'Technical architecture'), cost: t('运行成本', 'Cost'), security: t('安全', 'Security'), health: t('测试', 'Testing') };
+  const titles = { architecture: t('架构', 'Architecture'), cost: t('运行成本', 'Cost'), security: t('安全', 'Security'), health: t('测试', 'Testing'), api: 'API' };
   document.title = `${titles[current]} · ${t('文档 · DL 视频', 'Docs · DL video')} · dliu.com`;
   if (scroll) window.scrollTo(0, 0);
 }

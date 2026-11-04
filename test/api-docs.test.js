@@ -29,13 +29,10 @@ const el = (tag, attrs = {}, ...children) => {
   node.append(...children);
   return node;
 };
-const walk = (node) => [node, ...node.children.filter((child) => child instanceof Element).flatMap(walk)];
-
-function renderer() {
-  const context = { el, renderNav: jest.fn(), t: (zh, en) => en, document: { getElementById: () => null }, fetch: jest.fn() };
-  vm.runInNewContext(read('web/docs-api.js').replace(/^import .*;$/gm, '').replace(/^export /gm, ''), context);
-  return context;
-}
+const { humanRules } = require('./human-docs');
+const docsHtml = read('web/docs.html');
+const apiStart = docsHtml.indexOf('<article id="api"');
+const apiTab = docsHtml.slice(apiStart, docsHtml.indexOf('</article>', apiStart));
 
 test('the reference documents exactly the managed routes and their route scopes', () => {
   expect(endpoints.map((match) => `${match[1]} ${match[2]}`)).toEqual(Object.keys(routes));
@@ -126,46 +123,15 @@ test('documented request examples exercise all ten handlers locally with matchin
   } finally { process.env = original; }
 });
 
-test('the Markdown reference renders tables, code and endpoint anchors without executing HTML', () => {
-  const { renderApiMarkdown } = renderer();
-  const content = renderApiMarkdown(markdown);
-  const nodes = walk(content);
-  expect(nodes.filter((node) => node.tag === 'h3').map((node) => node.textContent)).toEqual(Object.keys(routes));
-  expect(nodes.filter((node) => node.tag === 'table').length).toBeGreaterThanOrEqual(5);
-  for (const node of nodes.filter((node) => node.tag === 'a' && node.attributes.href.startsWith('#'))) {
-    expect(nodes.some((target) => target.attributes.id === node.attributes.href.slice(1))).toBe(true);
-  }
-  const malicious = renderApiMarkdown('# Reference\n\n<script>alert(1)</script> [bad](javascript:alert) [bad2](//evil.example)\n\n```html\n<img onerror="bad">\n```');
-  expect(walk(malicious).some((node) => ['script', 'img', 'a'].includes(node.tag))).toBe(false);
-  expect(malicious.textContent).toContain('<script>alert(1)</script>');
-});
-
-test('fetch and document-format failures are surfaced instead of leaving a loading or success placeholder', async () => {
-  const context = renderer();
-  const root = el('div');
-  context.fetch.mockResolvedValueOnce({ ok: true, text: async () => markdown });
-  await context.loadApiDocs(root);
-  expect(context.fetch).toHaveBeenCalledWith('/docs/api.md');
-  expect(root.textContent).toContain('POST /api/uploads/complete');
-  context.fetch.mockResolvedValueOnce({ ok: false, status: 503 });
-  await context.loadApiDocs(root);
-  expect(root.textContent).toContain('Could not load the API reference: HTTP 503');
-  expect(walk(root).some((node) => node.attributes.role === 'alert')).toBe(true);
-  context.fetch.mockResolvedValueOnce({ ok: true, text: async () => '```json\nunclosed' });
-  await context.loadApiDocs(root);
-  expect(root.textContent).toContain('Unclosed code block');
-});
-
 // common.js imports i18n.js; the VM gets English stand-ins instead.
 const SWITCHER = el('div');
 const I18N = { t: (zh, en) => en, locale: undefined, translateError: (m) => m, languageSwitcher: () => SWITCHER };
 const commonScript = () => read('web/common.js').replace(/^import .*;$/gm, '').replace(/^export \{[^}]*\};$/gm, '').replace(/^export /gm, '');
 
 test('API navigation is linked from docs, keeps the website header active and preserves sign-in return paths', () => {
-  expect(read('web/docs.html')).toContain('<a href="/docs/api">API</a>');
-  expect(read('web/docs-api.html')).toContain('<a href="/docs/api" aria-current="page">API</a>');
-  expect(read('web/docs-api.html')).toContain('href="/docs/api.md"');
-  for (const pathname of ['/docs', '/docs/api', '/docs/api/']) {
+  expect(docsHtml).toContain('<a href="#api" data-tab="api">API</a>');
+  expect(docsHtml).toContain('<link rel="alternate" type="text/markdown" href="/docs/api.md"');
+  for (const pathname of ['/docs', '/docs/']) {
     const nav = el('nav');
     const context = { Node: Element, location: { pathname, search: '' }, ...I18N,
       document: { cookie: '', createElement: (tag) => el(tag),
@@ -178,10 +144,10 @@ test('API navigation is linked from docs, keeps the website header active and pr
 });
 
 test('every app menu has exactly one Docs button to /docs, for viewers and the owner, without duplicates', () => {
-  for (const html of ['index', 'watch', 'upload', 'docs', 'docs-api']) {
+  for (const html of ['index', 'watch', 'upload', 'docs']) {
     expect(read(`web/${html}.html`)).toMatch(/<header class="dl-header">[\s\S]*<nav class="dl-nav" aria-label="Site" data-zh-label="网站"><\/nav>[\s\S]*<\/header>/);
   }
-  for (const pathname of ['/', '/2026102700', '/upload', '/docs', '/docs/api']) {
+  for (const pathname of ['/', '/2026102700', '/upload', '/docs']) {
     for (const cookie of ['', 'video_owner=1']) {
       const nav = el('nav');
       const context = { Node: Element, location: { pathname, search: '' }, ...I18N,
@@ -223,12 +189,8 @@ test('the reference requires canonical Auth setup without duplicating generic cr
   expect(markdown).toContain('credentials and an authenticated requester configured per');
   expect(markdown).toContain('no application-global bearer-token cache');
   expect(markdown).toContain('not a forensic zeroization guarantee');
-  const nodes = walk(renderer().renderApiMarkdown(markdown));
-  expect(nodes.some((node) => node.tag === 'a' && node.attributes.href === 'https://auth.dliu.com/docs/api')).toBe(true);
-  const shell = read('web/docs-api.html');
-  expect(shell).toContain('href="https://auth.dliu.com/docs/api">Auth API documentation</a>');
-  expect(shell).toContain('Authentication is required');
-  for (const source of [markdown, shell]) {
+  expect(apiTab).toContain('<a href="https://auth.dliu.com/docs/api" data-zh="Auth API 文档">Auth API documentation</a>');
+  for (const source of [markdown, apiTab]) {
     expect(source).not.toMatch(/\.dliu_token|VIDEO_API_ACCESS_TOKEN|VIDEO_API_TOKEN_FILE|expires_at=|Authorization:|Save file|readAccessToken|23:59:59/);
   }
 });
@@ -250,4 +212,39 @@ test('the documented Video adapter forwards method/path/JSON unchanged and propa
   const failed = run('node() { return 17; }');
   expect(failed.status).toBe(17);
   expect(failed.stdout).toBe('');
+});
+
+test('the /docs#api tab shows the endpoints, permissions and flows in plain words, with no exact technical details', () => {
+  expect(apiTab).toMatch(/^<article id="api" class="dl-docs api-doc" hidden>/);
+  expect((apiTab.match(/class="dg-flow"/g) || []).length).toBeGreaterThanOrEqual(2);
+  expect((apiTab.match(/class="dg-step[ "]/g) || []).length).toBeGreaterThanOrEqual(10);
+  expect(apiTab).toMatch(/class="dg-arrow"/);
+  expect((apiTab.match(/class="dg-stat"/g) || []).length).toBeGreaterThanOrEqual(4);
+  const names = { 'video.read': 'Read', 'video.write': 'Change', 'video.delete': 'Delete' };
+  const rows = [...apiTab.matchAll(/<tr data-route="([^"]+)"><td>([^<]+)<\/td><td[^>]*>[^<]+<\/td><td class="api-(\w+)"[^>]*>(\w+)<\/td><\/tr>/g)];
+  const byPath = Object.fromEntries(Object.entries(routes).map(([route, value]) => [route.split(' ')[1], value]));
+  expect(rows.map((m) => m[1])).toEqual(Object.keys(byPath));
+  for (const [, route, shown, , permission] of rows) {
+    expect(shown).toBe(route);
+    expect(permission).toBe(names[byPath[route].scope]);
+  }
+  const counts = {};
+  for (const { scope } of Object.values(routes)) counts[scope] = (counts[scope] || 0) + 1;
+  const chart = [...apiTab.matchAll(/<div class="hc-row" data-chart="([\w.]+)">([\s\S]*?)<\/div>/g)];
+  expect(Object.fromEntries(chart.map(([, scope, body]) => [scope, (body.match(/<i /g) || []).length]))).toEqual(counts);
+  for (const [, scope, body] of chart) expect(body).toContain(`<span class="hc-count">${counts[scope]}</span>`);
+  expect(apiTab).toContain(`<strong>${Object.keys(routes).length}</strong><small data-zh="个接口">endpoints</small>`);
+  expect(apiTab).toContain(`<strong>${require('../config/site.json').maxUploadGiB} GiB</strong>`);
+  expect(markdown).toContain(`All ${['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'][Object.keys(routes).length]} managed routes are listed below.`);
+  expect(apiTab).toMatch(/<a href="\/docs\/api\.md"[^>]*>Technical version for machines \(Markdown\)<\/a>/);
+  humanRules(apiTab, ['/docs/api.md', 'https://auth.dliu.com/docs/api']);
+});
+
+test('/docs/api redirects to the API tab and the Markdown reference stays at /docs/api.md', () => {
+  expect(read('web/docs.js')).toMatch(/const TABS = \[[^\]]*'api'\]/);
+  const pages = new Function(`${read('functions/pages.js')}\nreturn handler;`)();
+  for (const uri of ['/docs/api', '/docs/api/']) {
+    expect(pages({ request: { uri } }).headers.location.value).toBe('/docs#api');
+  }
+  expect(pages({ request: { uri: '/docs/api.md' } }).uri).toBe('/docs/api.md');
 });
