@@ -122,7 +122,7 @@ test('the chart and the big numbers on the tab match the checks in the Markdown 
     total += visits + self;
   }
   expect(total).toBe(guest.length + reads.length);
-  expect(page).toContain(`<strong>${total}</strong><small data-zh="项检查，每个地方每轮">checks from each place, every round</small>`);
+  expect(page).toContain(`<strong>${total}</strong><small data-zh="项检查，爱尔兰、弗吉尼亚和东京每轮都做">checks every round from Ireland, Virginia and Tokyo</small>`);
   const functions = mdRows(section(md, '## Functions')).length;
   expect(page).toContain(`<strong>${functions}</strong><small data-zh="项功能被测试">functions tested</small>`);
 });
@@ -142,7 +142,13 @@ test('the /docs#health Health tab shows flows, numbers, a table and a chart, wit
   expect(page).toMatch(/data-zh="测不到的部分">What isn't tested</);
   expect(section(md, '## Not tested')).toMatch(/uploading/);
   expect(page).toMatch(/<a href="\/docs\/health\.md"[^>]*>Technical version for machines \(Markdown\)<\/a><\/p>\s*$/);
-  humanRules(page, ['/docs/health.md']);
+  const tiers = page.match(/<figure class="dg dg-tiers health-tiers">[\s\S]*?<\/figure>/)[0];
+  for (const tone of ['untrusted', 'edge', 'app', 'private']) expect(tiers).toMatch(new RegExp(`<div class="dg-tier dg-${tone}"><div class="dg-tier-label"><span class="dg-badge"`));
+  expect((tiers.match(/class="dg-link"/g) || []).length).toBe(3);
+  expect((tiers.match(/<div class="dg-node"><span class="dg-icon" data-icon="\w+"/g) || []).length).toBe((tiers.match(/class="dg-node"/g) || []).length);
+  expect((page.match(/<div class="dg-stat"><span class="dg-icon" data-icon=/g) || []).length).toBe((page.match(/class="dg-stat"/g) || []).length);
+  expect(page).toMatch(/^<article[^>]*>\s*<h2[^>]*>[^<]*<\/h2>\s*<p class="md-link">[^\n]*<a href="\/docs\/health\.md">\/docs\/health\.md<\/a><\/p>/);
+  humanRules(page, ['/docs/health.md', '/docs/health.md']);
 });
 
 test('the Health tab is on /docs and /docs/health redirects to it', () => {

@@ -108,3 +108,14 @@ test('security docs list every review finding and how to rerun the live tests', 
     expect(text).toContain(expected);
   }
 });
+
+test('every data-icon placeholder on /docs names an icon in the diagram kit', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const html = fs.readFileSync(path.join(__dirname, '../web/docs.html'), 'utf8');
+  const kit = fs.readFileSync(path.join(__dirname, '../web/diagram.js'), 'utf8');
+  const names = [...html.matchAll(/data-icon="(\w+)"/g)].map((m) => m[1]);
+  expect(names.length).toBeGreaterThan(20);
+  for (const name of new Set(names)) expect([name, kit]).toEqual([name, expect.stringMatching(new RegExp(`\\n  ${name}: \\['#`))]);
+  expect(fs.readFileSync(path.join(__dirname, '../web/docs.js'), 'utf8')).toMatch(/querySelectorAll\('\[data-icon\]'\)\) slot\.replaceWith\(icon\(/);
+});

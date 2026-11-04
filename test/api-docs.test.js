@@ -237,7 +237,12 @@ test('the /docs#api tab shows the endpoints, permissions and flows in plain word
   expect(apiTab).toContain(`<strong>${require('../config/site.json').maxUploadGiB} GiB</strong>`);
   expect(markdown).toContain(`All ${['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'][Object.keys(routes).length]} managed routes are listed below.`);
   expect(apiTab).toMatch(/<a href="\/docs\/api\.md"[^>]*>Technical version for machines \(Markdown\)<\/a>/);
-  humanRules(apiTab, ['/docs/api.md', 'https://auth.dliu.com/docs/api']);
+  const tiers = apiTab.match(/<figure class="dg dg-tiers api-tiers">[\s\S]*?<\/figure>/)[0];
+  for (const tone of ['untrusted', 'edge', 'app', 'private']) expect(tiers).toMatch(new RegExp(`<div class="dg-tier dg-${tone}"><div class="dg-tier-label"><span class="dg-badge"`));
+  expect((tiers.match(/class="dg-link"/g) || []).length).toBe(3);
+  expect((apiTab.match(/<div class="dg-stat"><span class="dg-icon" data-icon=/g) || []).length).toBe((apiTab.match(/class="dg-stat"/g) || []).length);
+  expect(apiTab).toMatch(/^<article[^>]*>\s*<h2[^>]*>[^<]*<\/h2>\s*<p class="md-link">[^\n]*<a href="\/docs\/api\.md">\/docs\/api\.md<\/a><\/p>/);
+  humanRules(apiTab, ['/docs/api.md', '/docs/api.md', 'https://auth.dliu.com/docs/api']);
 });
 
 test('/docs/api redirects to the API tab and the Markdown reference stays at /docs/api.md', () => {

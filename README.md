@@ -7,8 +7,8 @@ The API tab, [/docs#api](https://video.dliu.com/docs#api), shows people the ten 
 permissions and the upload flow in plain words, with flows, numbers, tables and a chart; the old `/docs/api` URL answers
 301 to it. The full reference for tools and agents, with request/response fields and the direct-to-S3 multipart
 workflow, is [/docs/api.md](https://video.dliu.com/docs/api.md).
-The Health tab, [/docs#health](https://video.dliu.com/docs#health), shows with flows, numbers, a table and a chart how [status.dliu.com](https://status.dliu.com)
-tests the site as an anonymous guest every 15 minutes; [/docs/health.md](https://video.dliu.com/docs/health.md) is the
+The Health tab, [/docs#health](https://video.dliu.com/docs#health), shows with a tier diagram (Architecture style), flows, numbers, a table and a chart how
+[status.dliu.com](https://status.dliu.com) tests the site as an anonymous guest every 15 minutes (hourly from mainland China); [/docs/health.md](https://video.dliu.com/docs/health.md) is the
 full technical version (every URL, status code and marker) for machines.
 
 ## How it works
@@ -272,7 +272,8 @@ dliu.com health contract (dliu-com/status `HEALTH.md`):
   for fail, with `output` limited to `slow`, `timeout` or `read failed`. The CloudFront `health` behavior forwards no
   cookies, headers or query string and caches the reply for 60 s, and the handler answers before it reads any request
   data.
-- The `/docs#health` Health tab (people: flows, big numbers, a plain-words table and a chart, no technical details;
+- The `/docs#health` Health tab (people: a tier diagram, flows, big numbers with icons, a plain-words table and a chart, no technical details;
+  a machine-readable link under the heading;
   the old `/docs/health` URL answers 301 to it) and `/docs/health.md` (machines, every detail, served as
   `text/markdown; charset=utf-8`) must stay in sync; `test/health.test.js` fails if the function keys or chart counts
   drift from the Markdown, if the tab loses its flows or gains technical details (status codes, `<code>`, `<details>`,

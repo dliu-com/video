@@ -150,3 +150,4 @@ html:not([lang^="zh"]) .api-language-note { display: none; }
 .hc-count { font-weight: 650; font-variant-numeric: tabular-nums; }
 @media (max-width: 640px) { .hc-row { grid-template-columns: 8.5em minmax(0, 1fr) 1.5em; font-size: 13px; } }
 .hc-note { margin: 10px 0 0; font-size: 13px; color: var(--dg-muted); }
+.md-link { margin: -4px 0 12px; font-size: 14px; color: var(--dl-muted, #57606a); }

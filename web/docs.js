@@ -1,5 +1,5 @@
 import { renderNav, t } from './common.js';
-import { flow, tiers, stats, table, callout, more } from './diagram.js';
+import { flow, tiers, stats, table, callout, more, icon } from './diagram.js';
 
 renderNav();
 
@@ -453,6 +453,8 @@ function security(root) {
 architecture(document.getElementById('architecture'));
 cost(document.getElementById('cost'));
 security(document.getElementById('security'));
+// The Health and API tabs are static HTML; their icons are drawn here because the CSP forbids inline styles.
+for (const slot of document.querySelectorAll('[data-icon]')) slot.replaceWith(icon(slot.dataset.icon));
 
 function show(scroll) {
   const current = TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : TABS[0];

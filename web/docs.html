@@ -41,37 +41,54 @@
     </article>
     <article id="health" class="dl-docs health-doc" hidden>
       <h2 data-zh="这个网站如何被测试">How this site is tested</h2>
-      <p class="lead" data-zh="每 15 分钟，status.dliu.com 会从世界上三个地方，像一位没有登录的普通访客一样访问本站：打开公开的页面，确认上锁的地方仍然上锁，再请网站自己检查一下视频列表和登录设置。它从不登录，也不会改动任何内容。">Every 15 minutes, status.dliu.com visits this site from three places around the world, like an ordinary visitor who isn't signed in. It opens the public pages, makes sure the locked doors are still locked, and asks the site to check its own video list and sign-in settings. It never signs in and never changes anything.</p>
+      <p class="md-link"><span data-zh="给机器看的版本：">Machine-readable version:</span> <a href="/docs/health.md">/docs/health.md</a></p>
+      <p class="lead" data-zh="每 15 分钟，status.dliu.com 会从世界上三个地方（每小时还会从中国大陆），像一位没有登录的普通访客一样访问本站：打开公开的页面，确认上锁的地方仍然上锁，再请网站自己检查一下视频列表和登录设置。它从不登录，也不会改动任何内容。">Every 15 minutes, status.dliu.com visits this site from three places around the world (and every hour from mainland China), like an ordinary visitor who isn't signed in. It opens the public pages, makes sure the locked doors are still locked, and asks the site to check its own video list and sign-in settings. It never signs in and never changes anything.</p>
 
       <div class="dg-stats health-stats">
-        <div class="dg-stat"><span class="dg-text"><strong>6</strong><small data-zh="项功能被测试">functions tested</small></span></div>
-        <div class="dg-stat"><span class="dg-text"><strong>11</strong><small data-zh="项检查，每个地方每轮">checks from each place, every round</small></span></div>
-        <div class="dg-stat"><span class="dg-text"><strong>15</strong><small data-zh="分钟一轮，全天不停">minutes between rounds, day and night</small></span></div>
-        <div class="dg-stat"><span class="dg-text"><strong>3</strong><small data-zh="个地方：爱尔兰、弗吉尼亚、东京">places: Ireland, Virginia and Tokyo</small></span></div>
-        <div class="dg-stat"><span class="dg-text"><strong>0</strong><small data-zh="次登录，也不改动任何内容">sign-ins, and nothing is ever changed</small></span></div>
+        <div class="dg-stat"><span class="dg-icon" data-icon="check" aria-hidden="true"></span><span class="dg-text"><strong>6</strong><small data-zh="项功能被测试">functions tested</small></span></div>
+        <div class="dg-stat"><span class="dg-icon" data-icon="chart" aria-hidden="true"></span><span class="dg-text"><strong>11</strong><small data-zh="项检查，爱尔兰、弗吉尼亚和东京每轮都做">checks every round from Ireland, Virginia and Tokyo</small></span></div>
+        <div class="dg-stat"><span class="dg-icon" data-icon="clock" aria-hidden="true"></span><span class="dg-text"><strong>15</strong><small data-zh="分钟一轮，全天不停">minutes between rounds, day and night</small></span></div>
+        <div class="dg-stat"><span class="dg-icon" data-icon="pin" aria-hidden="true"></span><span class="dg-text"><strong>4</strong><small data-zh="个地方：另外每小时从中国大陆检查首页和自检">places, adding an hourly look from mainland China at the home page and self-check</small></span></div>
+        <div class="dg-stat"><span class="dg-icon" data-icon="lock" aria-hidden="true"></span><span class="dg-text"><strong>0</strong><small data-zh="次登录，也不改动任何内容">sign-ins, and nothing is ever changed</small></span></div>
       </div>
+
+      <figure class="dg dg-tiers health-tiers">
+        <figcaption data-zh="谁测试什么">Who tests what</figcaption>
+        <div class="dg-tier dg-untrusted"><div class="dg-tier-label"><span class="dg-badge" data-zh="访客">Guest</span><strong data-zh="检查器">Testers</strong></div>
+          <div class="dg-tier-nodes"><div class="dg-node"><span class="dg-icon" data-icon="eye" aria-hidden="true"></span><span class="dg-text"><strong data-zh="status.dliu.com">status.dliu.com</strong><small data-zh="爱尔兰、弗吉尼亚和东京每 15 分钟；中国大陆每小时">Ireland, Virginia and Tokyo every 15 minutes; mainland China every hour</small></span></div><div class="dg-node"><span class="dg-icon" data-icon="chart" aria-hidden="true"></span><span class="dg-text"><strong data-zh="状态页">Status page</strong><small data-zh="显示每项功能正常、缓慢还是故障">Shows each function as up, slow or down</small></span></div></div></div>
+        <div class="dg-link"><span class="dg-arrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span><span data-zh="HTTPS，以访客身份，从不登录">HTTPS as a guest, never signed in</span></div>
+        <div class="dg-tier dg-edge"><div class="dg-tier-label"><span class="dg-badge" data-zh="边缘">Edge</span><strong>CloudFront</strong></div>
+          <div class="dg-tier-nodes"><div class="dg-node"><span class="dg-icon" data-icon="page" aria-hidden="true"></span><span class="dg-text"><strong data-zh="页面">Pages</strong><small data-zh="首页和 /docs 带着菜单栏打开">The home page and /docs open with the menu bar</small></span></div><div class="dg-node"><span class="dg-icon" data-icon="film" aria-hidden="true"></span><span class="dg-text"><strong data-zh="视频列表">Video list</strong><small data-zh="公开的视频列表能打开">The public list of videos opens</small></span></div><div class="dg-node"><span class="dg-icon" data-icon="play" aria-hidden="true"></span><span class="dg-text"><strong data-zh="播放器和嵌入">Player and embeds</strong><small data-zh="用占位视频打开观看页、嵌入播放器和播放器程序">A watch page, an embed player and the player program, for a placeholder video</small></span></div></div></div>
+        <div class="dg-link"><span class="dg-arrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span><span data-zh="只有 /health、/auth/login 和 /api/me 会到达后端">Only /health, /auth/login and /api/me go on to the backend</span></div>
+        <div class="dg-tier dg-app"><div class="dg-tier-label"><span class="dg-badge" data-zh="按需">On demand</span><strong>API</strong></div>
+          <div class="dg-tier-nodes"><div class="dg-node"><span class="dg-icon" data-icon="lambda" aria-hidden="true"></span><span class="dg-text"><strong data-zh="自检">Self-check</strong><small data-zh="/health 让网站检查自己的存储和登录设置">/health asks the site to look at its own storage and sign-in settings</small></span></div><div class="dg-node"><span class="dg-icon" data-icon="entra" aria-hidden="true"></span><span class="dg-text"><strong data-zh="Microsoft 登录">Microsoft sign-in</strong><small data-zh="/auth/login 必须把访客转到 Microsoft">/auth/login must send guests on to Microsoft</small></span></div><div class="dg-node"><span class="dg-icon" data-icon="lock" aria-hidden="true"></span><span class="dg-text"><strong data-zh="管理员工具的门锁">Owner tools lock</strong><small data-zh="/api/me 必须把访客挡回去">/api/me must turn guests away</small></span></div><div class="dg-node"><span class="dg-icon" data-icon="shield" aria-hidden="true"></span><span class="dg-text"><strong data-zh="工具接口的门锁">Tools API lock</strong><small data-zh="工具 API 必须挡回没有通行证的请求">The tools API must turn away callers without a pass</small></span></div></div></div>
+        <div class="dg-link"><span class="dg-arrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span><span data-zh="每样只读一次，从不写入">One quick read each, nothing is written</span></div>
+        <div class="dg-tier dg-private"><div class="dg-tier-label"><span class="dg-badge" data-zh="私有">Private</span><strong data-zh="AWS 账户">AWS account</strong></div>
+          <div class="dg-tier-nodes"><div class="dg-node"><span class="dg-icon" data-icon="film" aria-hidden="true"></span><span class="dg-text"><strong data-zh="视频存储桶">Video bucket</strong><small data-zh="存储有没有回应？">Does storage answer?</small></span></div><div class="dg-node"><span class="dg-icon" data-icon="ssm" aria-hidden="true"></span><span class="dg-text"><strong data-zh="Parameter Store">Parameter Store</strong><small data-zh="能否读到登录设置？">Can the sign-in settings be read?</small></span></div></div></div>
+        <p class="dg-note" data-zh="每项检查都只读取，所以测试绝不会改动视频、标题或设置。">Every check only reads, so testing can never change a video, a title or a setting.</p>
+      </figure>
 
       <figure class="dg">
         <figcaption data-zh="一轮检查的过程">One round of checks</figcaption>
         <div class="dg-flow" role="list">
-          <div class="dg-step" role="listitem"><span class="dg-num">1</span><span class="dg-text"><strong data-zh="状态检查器">Status checker</strong><small data-zh="从三个地方出发，像访客一样，从不登录">Sets out from three places, as a guest, never signed in</small></span></div>
+          <div class="dg-step" role="listitem"><span class="dg-num">1</span><span class="dg-icon" data-icon="eye" aria-hidden="true"></span><span class="dg-text"><strong data-zh="状态检查器">Status checker</strong><small data-zh="从四个地方出发，像访客一样，从不登录">Sets out from four places, as a guest, never signed in</small></span></div>
           <span class="dg-arrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span>
-          <div class="dg-step" role="listitem"><span class="dg-num">2</span><span class="dg-text"><strong data-zh="公开页面">Public pages</strong><small data-zh="首页、文档、观看页、嵌入播放器和视频列表都能打开">Home, docs, watch page, embed player and video list open</small></span></div>
+          <div class="dg-step" role="listitem"><span class="dg-num">2</span><span class="dg-icon" data-icon="page" aria-hidden="true"></span><span class="dg-text"><strong data-zh="公开页面">Public pages</strong><small data-zh="首页、文档、观看页、嵌入播放器和视频列表都能打开">Home, docs, watch page, embed player and video list open</small></span></div>
           <span class="dg-arrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span>
-          <div class="dg-step" role="listitem"><span class="dg-num">3</span><span class="dg-text"><strong data-zh="上锁的门">Locked doors</strong><small data-zh="登录转到 Microsoft；管理员工具把访客挡在门外">Sign-in goes to Microsoft; the owner tools turn guests away</small></span></div>
+          <div class="dg-step" role="listitem"><span class="dg-num">3</span><span class="dg-icon" data-icon="lock" aria-hidden="true"></span><span class="dg-text"><strong data-zh="上锁的门">Locked doors</strong><small data-zh="登录转到 Microsoft；管理员工具把访客挡在门外">Sign-in goes to Microsoft; the owner tools turn guests away</small></span></div>
           <span class="dg-arrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span>
-          <div class="dg-step" role="listitem"><span class="dg-num">4</span><span class="dg-text"><strong data-zh="网站自检">Site self-check</strong><small data-zh="网站看一眼自己的视频存储和登录设置">The site takes one look at its video storage and sign-in settings</small></span></div>
+          <div class="dg-step" role="listitem"><span class="dg-num">4</span><span class="dg-icon" data-icon="lambda" aria-hidden="true"></span><span class="dg-text"><strong data-zh="网站自检">Site self-check</strong><small data-zh="网站看一眼自己的视频存储和登录设置">The site takes one look at its video storage and sign-in settings</small></span></div>
           <span class="dg-arrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span>
-          <div class="dg-step" role="listitem"><span class="dg-num">5</span><span class="dg-text"><strong data-zh="状态页">Status page</strong><small data-zh="status.dliu.com 显示每项功能正常、缓慢还是故障">status.dliu.com shows each function as up, slow or down</small></span></div>
+          <div class="dg-step" role="listitem"><span class="dg-num">5</span><span class="dg-icon" data-icon="chart" aria-hidden="true"></span><span class="dg-text"><strong data-zh="状态页">Status page</strong><small data-zh="status.dliu.com 显示每项功能正常、缓慢还是故障">status.dliu.com shows each function as up, slow or down</small></span></div>
         </div>
       </figure>
 
       <figure class="dg">
         <figcaption data-zh="一项检查失败之后">When a check fails</figcaption>
         <div class="dg-flow health-results" role="list">
-          <div class="dg-step dg-good" role="listitem"><span class="dg-text"><strong data-zh="正常">Up</strong><small data-zh="每项检查都得到了预期的回答，而且够快">Every check got the answer it expected, quickly</small></span></div>
+          <div class="dg-step dg-good" role="listitem"><span class="dg-icon" data-icon="check" aria-hidden="true"></span><span class="dg-text"><strong data-zh="正常">Up</strong><small data-zh="每项检查都得到了预期的回答，而且够快">Every check got the answer it expected, quickly</small></span></div>
           <span class="dg-arrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span>
-          <div class="dg-step" role="listitem"><span class="dg-text"><strong data-zh="马上重试一次">Tried again at once</strong><small data-zh="一项检查出错时，立刻再试一次，避免误报">If a check goes wrong, it is tried once more straight away, to avoid false alarms</small></span></div>
+          <div class="dg-step" role="listitem"><span class="dg-icon" data-icon="clock" aria-hidden="true"></span><span class="dg-text"><strong data-zh="马上重试一次">Tried again at once</strong><small data-zh="一项检查出错时，立刻再试一次，避免误报">If a check goes wrong, it is tried once more straight away, to avoid false alarms</small></span></div>
           <span class="dg-arrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span>
           <div class="dg-step dg-warn" role="listitem"><span class="dg-text"><strong data-zh="缓慢">Slow</strong><small data-zh="仍然出错一轮，或者回答正确但比平时慢">Still wrong for one round, or right but slower than usual</small></span></div>
           <span class="dg-arrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span>
@@ -117,43 +134,60 @@
     </article>
     <article id="api" class="dl-docs api-doc" hidden>
       <h2 data-zh="给工具和 AI 助手用的 API">The API for tools and AI agents</h2>
+      <p class="md-link"><span data-zh="给机器看的版本：">Machine-readable version:</span> <a href="/docs/api.md">/docs/api.md</a></p>
       <p class="lead" data-zh="观看视频不需要 API。API 让管理员信任的工具、脚本和 AI 助手代替管理员管理视频：列出、上传、替换、编辑和删除。它们必须先用 Microsoft 账户登录，拿到一张只允许做特定事情的通行证。">Watching needs no API. The API lets tools, scripts and AI agents that the owner trusts manage videos on the owner's behalf: list, upload, replace, edit and delete. They first sign in with Microsoft and get a pass that only allows particular things.</p>
 
       <div class="dg-stats api-stats">
-        <div class="dg-stat"><span class="dg-text"><strong>10</strong><small data-zh="个接口">endpoints</small></span></div>
-        <div class="dg-stat"><span class="dg-text"><strong>3</strong><small data-zh="种权限：查看、修改、删除">permissions: read, change, delete</small></span></div>
-        <div class="dg-stat"><span class="dg-text"><strong>2</strong><small data-zh="道检查：网关和网站各查一次通行证">checks of every pass: gateway and site</small></span></div>
-        <div class="dg-stat"><span class="dg-text"><strong>50 GiB</strong><small data-zh="单个视频文件的上限">largest video file</small></span></div>
-        <div class="dg-stat"><span class="dg-text"><strong>0</strong><small data-zh="个密码保存在本站">passwords kept by this site</small></span></div>
+        <div class="dg-stat"><span class="dg-icon" data-icon="code" aria-hidden="true"></span><span class="dg-text"><strong>10</strong><small data-zh="个接口">endpoints</small></span></div>
+        <div class="dg-stat"><span class="dg-icon" data-icon="key" aria-hidden="true"></span><span class="dg-text"><strong>3</strong><small data-zh="种权限：查看、修改、删除">permissions: read, change, delete</small></span></div>
+        <div class="dg-stat"><span class="dg-icon" data-icon="shield" aria-hidden="true"></span><span class="dg-text"><strong>2</strong><small data-zh="道检查：网关和网站各查一次通行证">checks of every pass: gateway and site</small></span></div>
+        <div class="dg-stat"><span class="dg-icon" data-icon="upload" aria-hidden="true"></span><span class="dg-text"><strong>50 GiB</strong><small data-zh="单个视频文件的上限">largest video file</small></span></div>
+        <div class="dg-stat"><span class="dg-icon" data-icon="lock" aria-hidden="true"></span><span class="dg-text"><strong>0</strong><small data-zh="个密码保存在本站">passwords kept by this site</small></span></div>
       </div>
+
+      <figure class="dg dg-tiers api-tiers">
+        <figcaption data-zh="谁能用到 API">Who can reach the API</figcaption>
+        <div class="dg-tier dg-untrusted"><div class="dg-tier-label"><span class="dg-badge" data-zh="调用方">Callers</span><strong data-zh="工具和助手">Tools and agents</strong></div>
+          <div class="dg-tier-nodes"><div class="dg-node"><span class="dg-icon" data-icon="bot" aria-hidden="true"></span><span class="dg-text"><strong data-zh="AI 助手">AI agents</strong><small data-zh="代替管理员做事，只有被授予的权限">Act for the owner, with only the permissions they were given</small></span></div><div class="dg-node"><span class="dg-icon" data-icon="code" aria-hidden="true"></span><span class="dg-text"><strong data-zh="工具和脚本">Tools and scripts</strong><small data-zh="由管理员在电脑上运行">Run by the owner from a computer</small></span></div><div class="dg-node"><span class="dg-icon" data-icon="entra" aria-hidden="true"></span><span class="dg-text"><strong data-zh="Microsoft 登录">Microsoft sign-in</strong><small data-zh="通过 auth.dliu.com 登录，拿到会过期的通行证">Through auth.dliu.com; gives a pass that expires</small></span></div></div></div>
+        <div class="dg-link"><span class="dg-arrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span><span data-zh="HTTPS，每次请求都带着 Microsoft 通行证">HTTPS, with the Microsoft pass on every request</span></div>
+        <div class="dg-tier dg-edge"><div class="dg-tier-label"><span class="dg-badge" data-zh="网关">Gateway</span><strong data-zh="API Gateway">API Gateway</strong></div>
+          <div class="dg-tier-nodes"><div class="dg-node"><span class="dg-icon" data-icon="shield" aria-hidden="true"></span><span class="dg-text"><strong data-zh="核对通行证">Pass check</strong><small data-zh="必须真实、未过期并允许这个接口，否则挡回">Genuine, current and allowed for this endpoint, or turned away</small></span></div><div class="dg-node"><span class="dg-icon" data-icon="clock" aria-hidden="true"></span><span class="dg-text"><strong data-zh="速度上限">Speed limit</strong><small data-zh="每秒最多 10 次请求，所以大量请求几乎不花钱">At most 10 requests a second, so a flood costs almost nothing</small></span></div></div></div>
+        <div class="dg-link"><span class="dg-arrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span><span data-zh="只有通过网关的请求">Only requests that passed the gateway</span></div>
+        <div class="dg-tier dg-app"><div class="dg-tier-label"><span class="dg-badge" data-zh="按需">On demand</span><strong>API</strong></div>
+          <div class="dg-tier-nodes"><div class="dg-node"><span class="dg-icon" data-icon="lambda" aria-hidden="true"></span><span class="dg-text"><strong data-zh="API Lambda">API Lambda</strong><small data-zh="再核对一次是谁、来自哪个应用，然后执行">Checks again who it is and which app sent it, then does the work</small></span></div><div class="dg-node"><span class="dg-icon" data-icon="film" aria-hidden="true"></span><span class="dg-text"><strong data-zh="MediaConvert">MediaConvert</strong><small data-zh="2 小时没有改动后生成流媒体版本，也可以马上生成">Makes the streaming versions after 2 quiet hours, or on request</small></span></div></div></div>
+        <div class="dg-link"><span class="dg-arrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span><span data-zh="只读取和修改视频及视频列表">Reads and changes only the videos and their list</span></div>
+        <div class="dg-tier dg-private"><div class="dg-tier-label"><span class="dg-badge" data-zh="私有">Private</span><strong data-zh="AWS 账户">AWS account</strong></div>
+          <div class="dg-tier-nodes"><div class="dg-node"><span class="dg-icon" data-icon="film" aria-hidden="true"></span><span class="dg-text"><strong data-zh="视频存储桶">Video bucket</strong><small data-zh="视频、封面和视频列表">Videos, posters and the video list</small></span></div><div class="dg-node"><span class="dg-icon" data-icon="upload" aria-hidden="true"></span><span class="dg-text"><strong data-zh="上传链接">Upload links</strong><small data-zh="文件通过短期链接直接进入存储">Files go straight into storage with short-lived links</small></span></div></div></div>
+        <p class="dg-note" data-zh="网站会话和 API 通行证是分开的：两者不能互相代替。">A website session and an API pass are separate: neither one works in place of the other.</p>
+      </figure>
 
       <figure class="dg">
         <figcaption data-zh="工具如何登录并调用 API">How a tool signs in and calls the API</figcaption>
         <div class="dg-flow" role="list">
-          <div class="dg-step" role="listitem"><span class="dg-num">1</span><span class="dg-text"><strong data-zh="工具或 AI 助手">Tool or AI agent</strong><small data-zh="代替管理员做事">Acts for the owner</small></span></div>
+          <div class="dg-step" role="listitem"><span class="dg-num">1</span><span class="dg-icon" data-icon="bot" aria-hidden="true"></span><span class="dg-text"><strong data-zh="工具或 AI 助手">Tool or AI agent</strong><small data-zh="代替管理员做事">Acts for the owner</small></span></div>
           <span class="dg-arrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span>
-          <div class="dg-step" role="listitem"><span class="dg-num">2</span><span class="dg-text"><strong data-zh="Microsoft 登录">Microsoft sign-in</strong><small data-zh="通过 auth.dliu.com 登录，拿到一张有时限的通行证">Signs in through auth.dliu.com and gets a pass that expires</small></span></div>
+          <div class="dg-step" role="listitem"><span class="dg-num">2</span><span class="dg-icon" data-icon="entra" aria-hidden="true"></span><span class="dg-text"><strong data-zh="Microsoft 登录">Microsoft sign-in</strong><small data-zh="通过 auth.dliu.com 登录，拿到一张有时限的通行证">Signs in through auth.dliu.com and gets a pass that expires</small></span></div>
           <span class="dg-arrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span>
-          <div class="dg-step" role="listitem"><span class="dg-num">3</span><span class="dg-text"><strong data-zh="API 网关">API gateway</strong><small data-zh="核对通行证是否真实、未过期，并允许这个接口">Checks the pass is genuine, current and allows this endpoint</small></span></div>
+          <div class="dg-step" role="listitem"><span class="dg-num">3</span><span class="dg-icon" data-icon="shield" aria-hidden="true"></span><span class="dg-text"><strong data-zh="API 网关">API gateway</strong><small data-zh="核对通行证是否真实、未过期，并允许这个接口">Checks the pass is genuine, current and allows this endpoint</small></span></div>
           <span class="dg-arrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span>
-          <div class="dg-step" role="listitem"><span class="dg-num">4</span><span class="dg-text"><strong data-zh="网站函数">Site function</strong><small data-zh="再核对一次是谁、来自哪个应用，然后执行">Checks again who it is and which app sent it, then does the work</small></span></div>
+          <div class="dg-step" role="listitem"><span class="dg-num">4</span><span class="dg-icon" data-icon="lambda" aria-hidden="true"></span><span class="dg-text"><strong data-zh="网站函数">Site function</strong><small data-zh="再核对一次是谁、来自哪个应用，然后执行">Checks again who it is and which app sent it, then does the work</small></span></div>
           <span class="dg-arrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span>
-          <div class="dg-step dg-good" role="listitem"><span class="dg-num">5</span><span class="dg-text"><strong data-zh="视频存储">Video storage</strong><small data-zh="视频列表和文件被读取或修改">The video list and files are read or changed</small></span></div>
+          <div class="dg-step dg-good" role="listitem"><span class="dg-num">5</span><span class="dg-icon" data-icon="film" aria-hidden="true"></span><span class="dg-text"><strong data-zh="视频存储">Video storage</strong><small data-zh="视频列表和文件被读取或修改">The video list and files are read or changed</small></span></div>
         </div>
       </figure>
 
       <figure class="dg">
         <figcaption data-zh="上传一个视频">Uploading a video</figcaption>
         <div class="dg-flow" role="list">
-          <div class="dg-step" role="listitem"><span class="dg-num">1</span><span class="dg-text"><strong data-zh="开始">Start</strong><small data-zh="告诉网站文件名、大小和标题">Tell the site the file's name, size and title</small></span></div>
+          <div class="dg-step" role="listitem"><span class="dg-num">1</span><span class="dg-icon" data-icon="upload" aria-hidden="true"></span><span class="dg-text"><strong data-zh="开始">Start</strong><small data-zh="告诉网站文件名、大小和标题">Tell the site the file's name, size and title</small></span></div>
           <span class="dg-arrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span>
-          <div class="dg-step" role="listitem"><span class="dg-num">2</span><span class="dg-text"><strong data-zh="拿到上传链接">Get upload links</strong><small data-zh="每一块文件一个短期链接，像一把临时钥匙">One short-lived link per piece of the file, like a temporary key</small></span></div>
+          <div class="dg-step" role="listitem"><span class="dg-num">2</span><span class="dg-icon" data-icon="key" aria-hidden="true"></span><span class="dg-text"><strong data-zh="拿到上传链接">Get upload links</strong><small data-zh="每一块文件一个短期链接，像一把临时钥匙">One short-lived link per piece of the file, like a temporary key</small></span></div>
           <span class="dg-arrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span>
-          <div class="dg-step" role="listitem"><span class="dg-num">3</span><span class="dg-text"><strong data-zh="直接传到存储">Send the pieces</strong><small data-zh="文件直接进入存储，不经过网站">The file goes straight into storage, not through the site</small></span></div>
+          <div class="dg-step" role="listitem"><span class="dg-num">3</span><span class="dg-icon" data-icon="upload" aria-hidden="true"></span><span class="dg-text"><strong data-zh="直接传到存储">Send the pieces</strong><small data-zh="文件直接进入存储，不经过网站">The file goes straight into storage, not through the site</small></span></div>
           <span class="dg-arrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span>
-          <div class="dg-step dg-warn" role="listitem"><span class="dg-num">4</span><span class="dg-text"><strong data-zh="完成即发布">Finish = published</strong><small data-zh="没有草稿：完成后所有人立刻可以观看">There are no drafts: everyone can watch it at once</small></span></div>
+          <div class="dg-step dg-warn" role="listitem"><span class="dg-num">4</span><span class="dg-icon" data-icon="check" aria-hidden="true"></span><span class="dg-text"><strong data-zh="完成即发布">Finish = published</strong><small data-zh="没有草稿：完成后所有人立刻可以观看">There are no drafts: everyone can watch it at once</small></span></div>
           <span class="dg-arrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span>
-          <div class="dg-step dg-good" role="listitem"><span class="dg-num">5</span><span class="dg-text"><strong data-zh="流媒体版本">Streaming versions</strong><small data-zh="2 小时没有改动后自动生成，也可以马上生成">Made after 2 quiet hours, or straight away on request</small></span></div>
+          <div class="dg-step dg-good" role="listitem"><span class="dg-num">5</span><span class="dg-icon" data-icon="play" aria-hidden="true"></span><span class="dg-text"><strong data-zh="流媒体版本">Streaming versions</strong><small data-zh="2 小时没有改动后自动生成，也可以马上生成">Made after 2 quiet hours, or straight away on request</small></span></div>
         </div>
       </figure>
 
