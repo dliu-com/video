@@ -1,7 +1,7 @@
 AWS_REGION ?= eu-west-1
 STACK_NAME ?= Video
 
-.PHONY: install vendor test synth diff deploy set-secrets outputs smoke pentest
+.PHONY: install vendor test synth diff deploy set-secrets outputs smoke pentest sitemap
 
 install:
 	npm ci
@@ -38,3 +38,7 @@ smoke:
 # origin access, the concurrency cap and presigned poster URLs. Exits non-zero if any check fails.
 pentest:
 	AWS_REGION=$(AWS_REGION) bash scripts/pentest.sh
+
+# Rebuilds /sitemap.xml from the video index. The Lambda already does this on every publish, edit and delete.
+sitemap:
+	AWS_REGION=$(AWS_REGION) node scripts/publish-sitemap.js

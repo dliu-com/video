@@ -33,6 +33,7 @@ flowchart LR
 - **Player.** [Plyr](https://github.com/sampotts/plyr) controls with [hls.js](https://github.com/video-dev/hls.js). Both are self-hosted in `web/vendor/` and loaded only when a video is shown. The ⚙ menu has Quality (Auto shows the level it is playing, for example "Auto (720p)"), Speed and Download (the original file). hls.js keeps 30 to 60 seconds downloaded ahead, the same in every browser. Auto never picks more pixels than the player shows. Safari on iPhone uses its own HLS player, which picks the quality itself.
 - **Uploads go straight from the browser to S3** using presigned multipart URLs. Parts are at least 16 MiB, four upload in parallel, and failed parts are retried. The browser also reads the duration and size and grabs a thumbnail frame.
 - **There is no database.** `meta/index.json` in the video bucket is the source of truth and is updated with conditional writes. The Lambda publishes `data/catalog.json` (the list of videos) and `data/videos/<id>.json` (one per video). Pages read these through CloudFront.
+- **`/sitemap.xml` is generated.** Each time the catalog is published (upload, edit, conversion, delete), the Lambda also writes `sitemap.xml` to the video bucket (`no-cache`), served at the site root. It lists the home page, `/docs` and every video's watch page `/<id>` with its last change. It leaves out the embed player (served `noindex`), `/upload`, sign-in, the API, `/health`, the Markdown references, redirects and media files. `web/robots.txt` allows crawling and points at it. `make sitemap` (`scripts/publish-sitemap.js`) rewrites it from `meta/index.json` by hand.
 - **Chinese / English.** The `文/A` switch at the end of the header (the shared `dl-language` markup) changes every page, the player menu and the docs. The choice is saved in the browser (`video-language` in localStorage); otherwise any `zh-*` browser language shows Chinese. `web/i18n.js` translates static text from `data-zh` attributes and scripts use `t('中文', 'English')`. Video titles and descriptions are shown as written. `/docs/api.md` (for agents) stays English.
 - Every video is listed on the home page and can be watched or embedded by anyone with its link.
 - **Sign-in** uses Entra OIDC with PKCE, the same as traffic-monitor. Only accounts in the root domain (`@dliu.com`) can manage videos.
@@ -89,6 +90,7 @@ Requirements: the root `dliu.com` stack (exports `MainDomain`, `MainHostedZoneId
    make deploy      # runs the unit tests first
    make outputs
    make smoke       # end-to-end test against the live site
+   make sitemap     # write /sitemap.xml now (the Lambda keeps it current after that)
    ```
 
 Then open https://video.dliu.com, choose **Sign in**, and upload.

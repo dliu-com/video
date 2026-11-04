@@ -39,11 +39,13 @@ test('video bucket accepts browser uploads from the site and cleans up abandoned
 
 test('routes files, data and the API to the right origins', () => {
   expect(distributionConfig().CacheBehaviors.map((b: { PathPattern: string }) => b.PathPattern))
-    .toEqual(['embed/*', 'v/*', 't/*', 'h/*', 'data/*', 'api/*', 'auth/*', 'health']);
+    .toEqual(['embed/*', 'v/*', 't/*', 'h/*', 'data/*', 'sitemap.xml', 'api/*', 'auth/*', 'health']);
   expect(behavior('api/*').AllowedMethods).toContain('POST');
   expect(behavior('auth/*').AllowedMethods).not.toContain('POST');
   expect(behavior('v/*').Compress).toBe(false);
   expect(behavior('data/*').Compress).toBe(true);
+  expect(behavior('sitemap.xml').TargetOriginId).toBe(behavior('data/*').TargetOriginId);
+  expect(behavior('sitemap.xml').CachePolicyId).toEqual(behavior('data/*').CachePolicyId);
   expect(distributionConfig().Logging).toEqual({ IncludeCookies: true });
 });
 

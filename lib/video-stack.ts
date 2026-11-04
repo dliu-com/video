@@ -363,6 +363,8 @@ export class VideoStack extends Stack {
         't/*': fileBehavior,
         'h/*': { ...fileBehavior, cachePolicy: streamCache, responseHeadersPolicy: streamHeaders, compress: true },
         'data/*': { ...fileBehavior, cachePolicy: dataCache, compress: true },
+        // Written by the Lambda with the catalog whenever a video is published, edited or deleted (make sitemap rebuilds it).
+        'sitemap.xml': { ...fileBehavior, cachePolicy: dataCache, compress: true },
         'api/*': { ...apiBehavior, allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL },
         'auth/*': apiBehavior,
         'health': healthBehavior,

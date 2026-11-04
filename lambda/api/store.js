@@ -10,8 +10,10 @@
 //   pending/<id>.json        an upload in progress (not reachable from CloudFront)
 //   data/catalog.json        every video, for the home page (served by CloudFront)
 //   data/videos/<id>.json    one video's details, for the watch and embed pages
+//   sitemap.xml              the home page, /docs and every video's watch page (served by CloudFront as /sitemap.xml)
 const INDEX_KEY = 'meta/index.json';
 const CATALOG_KEY = 'data/catalog.json';
+const SITEMAP_KEY = 'sitemap.xml';
 const videoDataKey = (id) => `data/videos/${id}.json`;
 const pendingKey = (id) => `pending/${id}.json`;
 const videoKey = (id, ext, version) => (version ? `v/${id}-${version}.${ext}` : `v/${id}.${ext}`);
@@ -130,7 +132,37 @@ const ownerVideo = (video) => ({ ...publicVideo(video), conversion: conversionSt
 
 const newestFirst = (a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id);
 
-/** Rewrites the public files after an index change: the catalog, plus data/videos/<id>.json for the given IDs. */
+const xmlEscape = (text) => String(text).replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' })[c]);
+const lastChanged = (video) => video.updatedAt || video.createdAt;
+
+/**
+ * Every public, indexable page: the home page, /docs and each video's watch page (/<id>). Every published video is
+ * public. Left out: /upload and /auth/* (owner only), /embed/* (noindex), the API, the Markdown docs, redirects and files.
+ */
+function sitemapXml(index, siteUrl = process.env.SITE_URL || 'https://video.dliu.com') {
+  const base = siteUrl.replace(/\/+$/, '');
+  const videos = [...index.videos].sort(newestFirst);
+  const newest = videos.map(lastChanged).filter(Boolean).sort().pop();
+  const url = (path, lastmod) => `  <url><loc>${xmlEscape(base + path)}</loc>${lastmod ? `<lastmod>${xmlEscape(lastmod)}</lastmod>` : ''}</url>`;
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    url('/', newest),
+    url('/docs'),
+    ...videos.map((video) => url(`/${encodeURIComponent(video.id)}`, lastChanged(video))),
+    '</urlset>',
+    '',
+  ].join('\n');
+}
+
+async function writeSitemap(s3, bucket, index) {
+  const { PutObjectCommand } = s3sdk();
+  return s3.send(new PutObjectCommand({
+    Bucket: bucket, Key: SITEMAP_KEY, Body: sitemapXml(index), ContentType: 'application/xml; charset=utf-8', CacheControl: 'no-cache',
+  }));
+}
+
+/** Rewrites the public files after an index change: the catalog, the sitemap, and data/videos/<id>.json for the given IDs. */
 async function publish(s3, bucket, index, { changed = [], removed = [] } = {}, now = Date.now()) {
   const noCache = { CacheControl: 'no-cache' };
   const catalog = {
@@ -143,6 +175,7 @@ async function publish(s3, bucket, index, { changed = [], removed = [] } = {}, n
   const byId = new Map(index.videos.map((v) => [v.id, v]));
   await Promise.all([
     writeJson(s3, bucket, CATALOG_KEY, catalog, noCache),
+    writeSitemap(s3, bucket, index),
     ...changed.filter((id) => byId.has(id)).map((id) => writeJson(s3, bucket, videoDataKey(id), publicVideo(byId.get(id)), noCache)),
     deleteKeys(s3, bucket, removed.map(videoDataKey)),
   ]);
@@ -165,10 +198,13 @@ module.exports = {
   publish,
   readIndex,
   readJson,
+  SITEMAP_KEY,
+  sitemapXml,
   streamKey,
   streamPrefix,
   updateIndex,
   videoDataKey,
   videoKey,
   writeJson,
+  writeSitemap,
 };
