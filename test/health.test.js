@@ -147,8 +147,8 @@ test('the /docs#health Health tab shows flows, numbers, a table and a chart, wit
   expect((tiers.match(/class="dg-link"/g) || []).length).toBe(3);
   expect((tiers.match(/<div class="dg-node"><span class="dg-icon" data-icon="\w+"/g) || []).length).toBe((tiers.match(/class="dg-node"/g) || []).length);
   expect((page.match(/<div class="dg-stat"><span class="dg-icon" data-icon=/g) || []).length).toBe((page.match(/class="dg-stat"/g) || []).length);
-  expect(page).toMatch(/^<article[^>]*>\s*<h2[^>]*>[^<]*<\/h2>\s*<p class="md-link">[^\n]*<a href="\/docs\/health\.md">\/docs\/health\.md<\/a><\/p>/);
-  humanRules(page, ['/docs/health.md', '/docs/health.md']);
+  expect(page).toMatch(/^<article[^>]*>\s*<h2[^>]*>[^<]*<\/h2>\s*<p class="md-link">[^\n]*<a href="\/docs\/health\.md">\/docs\/health\.md<\/a> · <span data-zh="实时状态：">Live status:<\/span> <a href="https:\/\/status\.dliu\.com\/site\/video">status\.dliu\.com\/site\/video<\/a><\/p>/);
+  humanRules(page, ['/docs/health.md', 'https://status.dliu.com/site/video', '/docs/health.md']);
 });
 
 test('the Health tab is on /docs and /docs/health redirects to it', () => {
