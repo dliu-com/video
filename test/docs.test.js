@@ -119,3 +119,9 @@ test('every data-icon placeholder on /docs names an icon in the diagram kit', ()
   for (const name of new Set(names)) expect([name, kit]).toEqual([name, expect.stringMatching(new RegExp(`\\n  ${name}: \\['#`))]);
   expect(fs.readFileSync(path.join(__dirname, '../web/docs.js'), 'utf8')).toMatch(/querySelectorAll\('\[data-icon\]'\)\) slot\.replaceWith\(icon\(/);
 });
+
+test('the Architecture tab starts with a link to the source code', () => {
+  const html = require('fs').readFileSync(require('path').join(__dirname, '../web/docs.html'), 'utf8');
+  const article = html.match(/<article id="architecture" class="dl-docs">\s*([^\n]*)/)[1];
+  expect(article).toBe('<p class="dl-docs-repo"><span data-zh="源代码：">Source code:</span> <a href="https://github.com/dliu-com/video">github.com/dliu-com/video</a></p>');
+});
