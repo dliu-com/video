@@ -128,7 +128,7 @@ test('the chart and the big numbers on the tab match the checks in the Markdown 
 });
 
 
-test('the /docs#health Testing tab shows flows, numbers, a table and a chart, with no technical details', () => {
+test('the /docs#health Health tab shows flows, numbers, a table and a chart, with no technical details', () => {
   expect(page).toMatch(/^<article id="health" class="dl-docs health-doc" hidden>/);
   expect((page.match(/class="dg-flow[ "]/g) || []).length).toBeGreaterThanOrEqual(2);
   expect((page.match(/class="dg-step[ "]/g) || []).length).toBeGreaterThanOrEqual(8);
@@ -145,8 +145,8 @@ test('the /docs#health Testing tab shows flows, numbers, a table and a chart, wi
   humanRules(page, ['/docs/health.md']);
 });
 
-test('the Testing tab is on /docs and /docs/health redirects to it', () => {
-  expect(html).toContain('<a href="#health" data-tab="health" data-zh="测试">Testing</a>');
+test('the Health tab is on /docs and /docs/health redirects to it', () => {
+  expect(html).toContain('<a href="#health" data-tab="health" data-zh="健康">Health</a>');
   expect(read('web/docs.js')).toMatch(/const TABS = \[[^\]]*'health'[^\]]*\]/);
   for (const file of ['web/docs-health.html', 'web/docs-api.html']) expect(fs.existsSync(path.join(__dirname, '..', file))).toBe(false);
   const code = read('functions/pages.js');

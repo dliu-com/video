@@ -461,7 +461,7 @@ function show(scroll) {
     if (link.dataset.tab === current) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   }
-  const titles = { architecture: t('架构', 'Architecture'), cost: t('运行成本', 'Cost'), security: t('安全', 'Security'), health: t('测试', 'Testing'), api: 'API' };
+  const titles = { architecture: t('架构', 'Architecture'), cost: t('运行成本', 'Cost'), security: t('安全', 'Security'), health: t('健康', 'Health'), api: 'API' };
   document.title = `${titles[current]} · ${t('文档 · DL 视频', 'Docs · DL video')} · dliu.com`;
   if (scroll) window.scrollTo(0, 0);
 }
